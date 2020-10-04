@@ -75,3 +75,5 @@ dataset/
 *.yaml
 slurm*
 initmodel
+
+.idea/
