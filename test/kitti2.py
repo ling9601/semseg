@@ -72,29 +72,45 @@ def visualize():
     plt.show()
 
 
-def makeList(section='train', variations=None, camera=0):
+def makeList(train_rate=0.9, variations=None, camera=0):
     """
     creat list 'train.txt', 'val.txt'
     Args:
-        section: train or val
+        train_rate:
         variations: subset of [15-deg-left, 15-deg-right, 30-deg-left, 30-deg-right, clone, fog, morning, overcast, rain, sunset]
         camera: 0 or 1
 
     """
     if variations is None:
-        variations = ['15-deg-left']
+        variations = ['15-deg-left', '15-deg-right', 'clone']
     dst = '../dataset/kitti2/list'
     rgb_names = []
     label_names = []
     for i in variations:
-        rgb_names.extend(glob.glob('../dataset/kitti2/rgb/{}/*/{}/*/*/Camera_{}/rgb_*.jpg'.format(section, i, camera)))
+        rgb_names.extend(glob.glob('../dataset/kitti2/rgb/*/{}/*/*/Camera_{}/rgb_*.jpg'.format(i, camera)))
         label_names.extend(
-            glob.glob('../dataset/kitti2/label/{}/*/{}/*/*/Camera_{}/label_*.png'.format(section, i, camera)))
+            glob.glob('../dataset/kitti2/label/*/{}/*/*/Camera_{}/label_*.png'.format(i, camera)))
+    # only take one third of the data
+    rgb_names = sorted([n for n in rgb_names if int(n[-9:-4]) % 3 == 0])
+    label_names = sorted([n for n in label_names if int(n[-9:-4]) % 3 == 0])
+    # remove data root path
+    rgb_names = [i.replace('../dataset/kitti2/', '') for i in rgb_names]
+    label_names = [i.replace('../dataset/kitti2/', '') for i in label_names]
     assert len(rgb_names) == len(label_names)
-    rgb_names = [i.replace('../dataset/kitti2/', '') for i in sorted(rgb_names)]
-    label_names = [i.replace('../dataset/kitti2/', '') for i in sorted(label_names)]
-    with open(os.path.join(dst, '{}.txt'.format(section)), 'w') as f:
-        f.writelines([' '.join([rgb, label]) + '\n' for rgb, label in zip(rgb_names, label_names)])
+    # shuffle data
+    idx = np.arange(len(rgb_names))
+    np.random.seed(0)
+    np.random.shuffle(idx)
+    rgb_names = [rgb_names[i] for i in idx]
+    label_names = [label_names[i] for i in idx]
+    train_num = int(len(rgb_names) * train_rate)
+    with open(os.path.join(dst, 'train.txt'), 'w') as f:
+        f.writelines(
+            [' '.join([rgb, label]) + '\n' for rgb, label in zip(rgb_names[:train_num], label_names[:train_num])])
+    with open(os.path.join(dst, 'val.txt'), 'w') as f:
+        f.writelines(
+            [' '.join([rgb, label]) + '\n' for rgb, label in zip(rgb_names[train_num:], label_names[train_num:])])
+    print('train({}), val({})'.format(train_num, len(rgb_names) - train_num))
 
 
 if __name__ == '__main__':
