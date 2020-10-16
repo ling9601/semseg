@@ -58,6 +58,13 @@ def transform():
         cv2.imwrite(path.replace('classgt', 'label'), label)
 
 
+def rename():
+    paths = glob.glob('../dataset/kitti2/*/*/*/*/*/*/*')
+    for p in tqdm(paths):
+        new_name = '+'.join(p.replace('../dataset/kitti2/', '').split('/'))
+        os.rename(p, p.replace(os.path.basename(p), new_name))
+
+
 def visualize():
     rgb_names = sorted(glob.glob('../dataset/kitti2/rgb/*/*/*/*/*/*/rgb_*.jpg'))
     color_names = sorted(glob.glob('../dataset/kitti2/label/*/*/*/*/*/*/classgt_*.png'))
@@ -72,7 +79,7 @@ def visualize():
     plt.show()
 
 
-def makeList(train_rate=0.9, variations=None, camera=0):
+def makeList_randomSplit(train_rate=0.9, variations=None, camera=0):
     """
     creat list 'train.txt', 'val.txt'
     Args:
@@ -87,12 +94,14 @@ def makeList(train_rate=0.9, variations=None, camera=0):
     rgb_names = []
     label_names = []
     for i in variations:
-        rgb_names.extend(glob.glob('../dataset/kitti2/rgb/*/{}/*/*/Camera_{}/rgb_*.jpg'.format(i, camera)))
+        rgb_names.extend(glob.glob('../dataset/kitti2/rgb/*/{}/*/*/Camera_{}/*rgb_*.jpg'.format(i, camera)))
         label_names.extend(
-            glob.glob('../dataset/kitti2/label/*/{}/*/*/Camera_{}/label_*.png'.format(i, camera)))
+            glob.glob('../dataset/kitti2/label/*/{}/*/*/Camera_{}/*label_*.png'.format(i, camera)))
+    rgb_names.sort()
+    label_names.sort()
     # only take one third of the data
-    rgb_names = sorted([n for n in rgb_names if int(n[-9:-4]) % 3 == 0])
-    label_names = sorted([n for n in label_names if int(n[-9:-4]) % 3 == 0])
+    rgb_names = [n for n in rgb_names if int(n[-9:-4]) % 3 == 0]
+    label_names = [n for n in label_names if int(n[-9:-4]) % 3 == 0]
     # remove data root path
     rgb_names = [i.replace('../dataset/kitti2/', '') for i in rgb_names]
     label_names = [i.replace('../dataset/kitti2/', '') for i in label_names]
@@ -111,6 +120,75 @@ def makeList(train_rate=0.9, variations=None, camera=0):
         f.writelines(
             [' '.join([rgb, label]) + '\n' for rgb, label in zip(rgb_names[train_num:], label_names[train_num:])])
     print('train({}), val({})'.format(train_num, len(rgb_names) - train_num))
+
+
+def makeList(variation=None, camera=0):
+    if variation is None:
+        variations = ['15-deg-left', '15-deg-right', 'clone']
+    dst = '../dataset/kitti2/list'
+    split = {
+        'train': ['01', '06', '18', '20'],
+        'val': ['02']
+    }
+    for section, scenes in split.items():
+        rgb_names = []
+        label_names = []
+        for s in scenes:
+            for v in variations:
+                rgb_names.extend(glob.glob('../dataset/kitti2/rgb/Scene{}/{}/*/*/Camera_{}/*rgb_*.jpg'.format(s, v, camera)))
+                label_names.extend(
+                    glob.glob('../dataset/kitti2/label/Scene{}/{}/*/*/Camera_{}/*label_*.png'.format(s, v, camera)))
+        rgb_names.sort()
+        label_names.sort()
+        # only take one third of the data
+        rgb_names = [n for n in rgb_names if int(n[-9:-4]) % 3 == 0]
+        label_names = [n for n in label_names if int(n[-9:-4]) % 3 == 0]
+        # remove data root path
+        rgb_names = [i.replace('../dataset/kitti2/', '') for i in rgb_names]
+        label_names = [i.replace('../dataset/kitti2/', '') for i in label_names]
+        assert len(rgb_names) == len(label_names)
+        with open(os.path.join(dst, '{}.txt'.format(section)), 'w') as f:
+            f.writelines(
+                [' '.join([rgb, label]) + '\n' for rgb, label in zip(rgb_names, label_names)]
+            )
+        print('{}({})'.format(section, len(rgb_names)))
+
+
+def visualize_class_distribution(scene='01'):
+    def autolabel(rects):
+        """
+        Attach a text label above each bar displaying its height
+        """
+        for rect in rects:
+            height = rect.get_height()
+            ax.text(rect.get_x() + rect.get_width() / 2., 1.01 * height,
+                    '{:.2f}%'.format(height*100),
+                    ha='center', va='bottom')
+    assert scene in ['01', '02', '06', '18', '20']
+    variation = ['15-deg-left', '15-deg-right', 'clone']
+    label_paths = []
+    for v in variation:
+        label_paths.extend(glob.glob('../dataset/kitti2/label/Scene{}/{}/*/*/Camera_0/*'.format(scene, v)))
+    counts_sum = np.zeros((14,))
+    class_names = open('../data/kitti2/kitti2_names.txt', 'r').readlines()
+    class_names = [n.strip() for n in class_names]
+    for path in tqdm(label_paths):
+        label = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+        label.resize(label.size)
+        counts, bins = np.histogram(label, bins=np.arange(15))
+        counts_sum += counts
+    probability = counts_sum/sum(counts_sum)
+    fig, ax = plt.subplots()
+    width = 0.75
+    ind = np.arange(len(class_names))
+    rect = ax.bar(ind, probability, width, color='blue')
+    ax.set_xticks(ind)
+    ax.set_xticklabels(class_names)
+    autolabel(rect)
+    plt.title('Scene{} [{}]'.format(scene, ', '.join(variation)))
+    plt.xlabel('Percentage')
+    plt.ylabel('Class')
+    plt.savefig('Scene{} [{}].png'.format(scene, ', '.join(variation)), dpi=300, box_inches='tight')
 
 
 if __name__ == '__main__':
