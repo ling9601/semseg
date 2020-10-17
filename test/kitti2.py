@@ -5,22 +5,29 @@ import cv2
 import matplotlib.pyplot as plt
 import os
 
+
+class Label:
+    def __init__(self, className, trainId):
+        self.className = className
+        self.trainId = trainId
+
+
 color2label = {
-    (210, 0, 200): 0,
-    (90, 200, 255): 1,
-    (0, 199, 0): 2,
-    (90, 240, 0): 3,
-    (140, 140, 140): 4,
-    (100, 60, 100): 5,
-    (250, 100, 255): 6,
-    (255, 255, 0): 7,
-    (200, 200, 0): 8,
-    (255, 130, 0): 9,
-    (80, 80, 80): 10,
-    (160, 60, 60): 11,
-    (255, 127, 80): 12,
-    (0, 139, 139): 13,
-    (0, 0, 0): 255,
+    (210, 0, 200): Label('Terrain', 0),
+    (90, 200, 255): Label('Sky', 1),
+    (0, 199, 0): Label('Tree', 2),
+    (90, 240, 0): Label('Vegetation', 3),
+    (140, 140, 140): Label('Building', 4),
+    (100, 60, 100): Label('Road', 5),
+    (250, 100, 255): Label('GuardRail', 255),
+    (255, 255, 0): Label('TrafficSign', 7),
+    (200, 200, 0): Label('TrafficLight', 8),
+    (255, 130, 0): Label('Pole', 9),
+    (80, 80, 80): Label('Misc', 255),
+    (160, 60, 60): Label('Truck', 11),
+    (255, 127, 80): Label('Car', 12),
+    (0, 139, 139): Label('Van', 13),
+    (0, 0, 0): Label('Undefined', 255),
 }
 
 
@@ -44,12 +51,12 @@ def rgb2label(img):
     label = np.zeros(img_id.shape)
 
     for i, c in enumerate(values):
-        label[img_id == c] = color2label[tuple(img[img_id == c][0])]
+        label[img_id == c] = color2label[tuple(img[img_id == c][0])].trainId
     return label
 
 
 def transform():
-    pathes = glob.glob('../dataset/kitti2/label/*/*/*/*/*/*/classgt_*.png')
+    pathes = glob.glob('../dataset/kitti2/label/*/*/*/*/*/*classgt_*.png')
     assert len(pathes) == 42520
 
     for path in tqdm(pathes):
@@ -135,7 +142,8 @@ def makeList(variation=None, camera=0):
         label_names = []
         for s in scenes:
             for v in variations:
-                rgb_names.extend(glob.glob('../dataset/kitti2/rgb/Scene{}/{}/*/*/Camera_{}/*rgb_*.jpg'.format(s, v, camera)))
+                rgb_names.extend(
+                    glob.glob('../dataset/kitti2/rgb/Scene{}/{}/*/*/Camera_{}/*rgb_*.jpg'.format(s, v, camera)))
                 label_names.extend(
                     glob.glob('../dataset/kitti2/label/Scene{}/{}/*/*/Camera_{}/*label_*.png'.format(s, v, camera)))
         rgb_names.sort()
@@ -154,6 +162,21 @@ def makeList(variation=None, camera=0):
         print('{}({})'.format(section, len(rgb_names)))
 
 
+def normalize_depth():
+    src_dir = '../dataset/kitti2/depth'
+    dst_dir = '../dataset/kitti2/normalized_3C_depth'
+    depth_paths = glob.glob('../dataset/kitti2/depth/*/*/*/*/*/*depth_*.png')
+    assert len(depth_paths) == 42520
+    for path in tqdm(depth_paths):
+        depth = cv2.imread(path, cv2.IMREAD_UNCHANGED).astype(np.float32)
+        normalized_depth = (depth / 65535 * 255).astype('uint8')
+        normalized_3C_depth = np.stack((normalized_depth,)*3, axis=-1)
+        new_path = path.replace(src_dir, dst_dir)
+        if not os.path.isdir(os.path.dirname(new_path)):
+            os.makedirs(os.path.dirname(new_path))
+        cv2.imwrite(new_path, normalized_3C_depth)
+
+
 def visualize_class_distribution(scene='01'):
     def autolabel(rects):
         """
@@ -162,8 +185,9 @@ def visualize_class_distribution(scene='01'):
         for rect in rects:
             height = rect.get_height()
             ax.text(rect.get_x() + rect.get_width() / 2., 1.01 * height,
-                    '{:.2f}%'.format(height*100),
+                    '{:.2f}%'.format(height * 100),
                     ha='center', va='bottom')
+
     assert scene in ['01', '02', '06', '18', '20']
     variation = ['15-deg-left', '15-deg-right', 'clone']
     label_paths = []
@@ -177,7 +201,7 @@ def visualize_class_distribution(scene='01'):
         label.resize(label.size)
         counts, bins = np.histogram(label, bins=np.arange(15))
         counts_sum += counts
-    probability = counts_sum/sum(counts_sum)
+    probability = counts_sum / sum(counts_sum)
     fig, ax = plt.subplots()
     width = 0.75
     ind = np.arange(len(class_names))
@@ -192,4 +216,4 @@ def visualize_class_distribution(scene='01'):
 
 
 if __name__ == '__main__':
-    makeList()
+    normalize_depth()
