@@ -14,7 +14,7 @@ def is_image_file(filename):
     return any(filename_lower.endswith(extension) for extension in IMG_EXTENSIONS)
 
 
-def make_dataset(split='train', data_root=None, data_list=None):
+def make_dataset(split='train', data_root=None, data_list=None, is_depth=False):
     assert split in ['train', 'val', 'test']
     if not os.path.isfile(data_list):
         raise (RuntimeError("Image list file do not exist: " + data_list + "\n"))
@@ -26,15 +26,29 @@ def make_dataset(split='train', data_root=None, data_list=None):
         line = line.strip()
         line_split = line.split(' ')
         if split == 'test':
-            if len(line_split) != 1:
-                raise (RuntimeError("Image list file read line error : " + line + "\n"))
-            image_name = os.path.join(data_root, line_split[0])
-            label_name = image_name  # just set place holder for label_name, not for use
+            if not is_depth:
+                if len(line_split) != 1:
+                    raise (RuntimeError("Image list file read line error : " + line + "\n"))
+                image_name = os.path.join(data_root, line_split[0])
+                label_name = image_name  # just set place holder for label_name, not for use
+            else:
+                if len(line_split) != 2:
+                    raise (RuntimeError("Image list file read line error : " + line + "\n"))
+                image_name = os.path.join(data_root, line_split[0])
+                depth_name = os.path.join(data_root, line_split[1])
+                label_name = image_name  # just set place holder for label_name, not for use
         else:
-            if len(line_split) != 2:
-                raise (RuntimeError("Image list file read line error : " + line + "\n"))
-            image_name = os.path.join(data_root, line_split[0])
-            label_name = os.path.join(data_root, line_split[1])
+            if not is_depth:
+                if len(line_split) != 2:
+                    raise (RuntimeError("Image list file read line error : " + line + "\n"))
+                image_name = os.path.join(data_root, line_split[0])
+                label_name = os.path.join(data_root, line_split[1])
+            else:
+                if len(line_split) != 3:
+                    raise (RuntimeError("Image list file read line error : " + line + "\n"))
+                image_name = os.path.join(data_root, line_split[0])
+                depth_name = os.path.join(data_root, line_split[1])
+                label_name = os.path.join(data_root, line_split[2])
         '''
         following check costs some time
         if is_image_file(image_name) and is_image_file(label_name) and os.path.isfile(image_name) and os.path.isfile(label_name):
@@ -43,29 +57,46 @@ def make_dataset(split='train', data_root=None, data_list=None):
         else:
             raise (RuntimeError("Image list file line error : " + line + "\n"))
         '''
-        item = (image_name, label_name)
+        if not is_depth:
+            item = (image_name, label_name)
+        else:
+            item = (image_name, depth_name, label_name)
         image_label_list.append(item)
     print("Checking image&label pair {} list done!".format(split))
     return image_label_list
 
 
 class SemData(Dataset):
-    def __init__(self, split='train', data_root=None, data_list=None, transform=None):
+    def __init__(self, split='train', data_root=None, data_list=None, transform=None, is_depth=False):
         self.split = split
-        self.data_list = make_dataset(split, data_root, data_list)
+        self.data_list = make_dataset(split, data_root, data_list, is_depth=is_depth)
         self.transform = transform
+        self.is_depth = is_depth
 
     def __len__(self):
         return len(self.data_list)
 
     def __getitem__(self, index):
-        image_path, label_path = self.data_list[index]
+        if not self.is_depth:
+            image_path, label_path = self.data_list[index]
+        else:
+            image_path, depth_path, label_path = self.data_list[index]
         image = cv2.imread(image_path, cv2.IMREAD_COLOR)  # BGR 3 channel ndarray wiht shape H * W * 3
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # convert cv2 read image from BGR order to RGB order
         image = np.float32(image)
         label = cv2.imread(label_path, cv2.IMREAD_GRAYSCALE)  # GRAY 1 channel ndarray with shape H * W
         if image.shape[0] != label.shape[0] or image.shape[1] != label.shape[1]:
-            raise (RuntimeError("Image & label shape mismatch: " + image_path + " " + label_path + "\n"))
+            raise (RuntimeError("Image & label shape mismatch: " + image_path + " " + label_path + "\n" ))
+        if self.is_depth:
+            depth = cv2.imread(depth_path, cv2.IMREAD_COLOR)  # BGR 3 channel ndarray wiht shape H * W * 3
+            depth = cv2.cvtColor(depth, cv2.COLOR_BGR2RGB)  # convert cv2 read image from BGR order to RGB order
+            depth = np.float32(depth)
         if self.transform is not None:
-            image, label = self.transform(image, label)
-        return image, label
+            if not self.is_depth:
+                image, label = self.transform(image, label)
+            else:
+                image, depth, label = self.transform(image, label, depth)
+        if not self.is_depth:
+            return image, label
+        else:
+            return image, depth, label
