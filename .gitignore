@@ -77,4 +77,4 @@ slurm*
 initmodel
 
 .idea/
-test.py
+test/test.py
