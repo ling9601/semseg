@@ -84,7 +84,7 @@ def main():
     color_folder = os.path.join(args.save_folder, 'color')
 
     test_transform = transform.Compose([transform.ToTensor()])
-    test_data = dataset.SemData(split=args.split, data_root=args.data_root, data_list=args.test_list, transform=test_transform)
+    test_data = dataset.SemData(split=args.split, data_root=args.data_root, data_list=args.test_list, transform=test_transform, is_depth=args.is_depth)
     index_start = args.index_start
     if args.index_step == 0:
         index_end = len(test_data.data_list)
@@ -104,6 +104,9 @@ def main():
             model = PSANet(layers=args.layers, classes=args.classes, zoom_factor=args.zoom_factor, compact=args.compact,
                            shrink_factor=args.shrink_factor, mask_h=args.mask_h, mask_w=args.mask_w,
                            normalization_factor=args.normalization_factor, psa_softmax=args.psa_softmax, pretrained=False)
+        elif args.arch == 'fusePsp':
+            from model.fuse_pspnet import FusedPSPNet
+            model = FusedPSPNet(layers=args.layers, classes=args.classes, zoom_factor=args.zoom_factor, pretrained=False)
         logger.info(model)
         model = torch.nn.DataParallel(model).cuda()
         cudnn.benchmark = True
@@ -114,9 +117,17 @@ def main():
             logger.info("=> loaded checkpoint '{}'".format(args.model_path))
         else:
             raise RuntimeError("=> no checkpoint found at '{}'".format(args.model_path))
-        test(test_loader, test_data.data_list, model, args.classes, mean, std, args.base_size, args.test_h, args.test_w, args.scales, gray_folder, color_folder, colors)
+        if args.is_depth:
+            test_method = test_d
+        else:
+            test_method = test
+        test_method(test_loader, test_data.data_list, model, args.classes, mean, std, args.base_size, args.test_h, args.test_w, args.scales, gray_folder, color_folder, colors)
     if args.split != 'test':
-        cal_acc(test_data.data_list, gray_folder, args.classes, names)
+        if args.is_depth:
+            cal_acc_method = cal_acc_d
+        else:
+            cal_acc_method = cal_acc
+        cal_acc_method(test_data.data_list, gray_folder, args.classes, names)
 
 
 def net_process(model, image, mean, std=None, flip=True):
@@ -144,6 +155,39 @@ def net_process(model, image, mean, std=None, flip=True):
     output = output.data.cpu().numpy()
     output = output.transpose(1, 2, 0)
     return output
+
+
+def net_process_d(model, image, depth, mean, std=None, flip=True):
+    image = torch.from_numpy(image.transpose((2, 0, 1))).float()
+    depth = torch.from_numpy(depth.transpose((2, 0, 1))).float()
+    if std is None:
+        for img, dep, m in zip(image, depth, mean):
+            img.sub_(m)
+            dep.sub_(m)
+    else:
+        for img, dep, m, s in zip(image, depth, mean, std):
+            img.sub_(m).div_(s)
+            dep.sub_(m).div_(s)
+    image = image.unsqueeze(0).cuda()
+    depth = depth.unsqueeze(0).cuda()
+    if flip:
+        image = torch.cat([image, image.flip(3)], 0)
+        depth = torch.cat([depth, depth.flip(3)], 0)
+    with torch.no_grad():
+        output = model(image, depth)
+    _, _, h_i, w_i = image.shape
+    _, _, h_o, w_o = output.shape
+    if (h_o != h_i) or (w_o != w_i):
+        output = F.interpolate(output, (h_i, w_i), mode='bilinear', align_corners=True)
+    output = F.softmax(output, dim=1)
+    if flip:
+        output = (output[0] + output[1].flip(2)) / 2
+    else:
+        output = output[0]
+    output = output.data.cpu().numpy()
+    output = output.transpose(1, 2, 0)
+    return output
+
 
 
 def scale_process(model, image, classes, crop_h, crop_w, h, w, mean, std=None, stride_rate=2/3):
@@ -176,6 +220,41 @@ def scale_process(model, image, classes, crop_h, crop_w, h, w, mean, std=None, s
     prediction_crop = prediction_crop[pad_h_half:pad_h_half+ori_h, pad_w_half:pad_w_half+ori_w]
     prediction = cv2.resize(prediction_crop, (w, h), interpolation=cv2.INTER_LINEAR)
     return prediction
+
+
+def scale_process_d(model, image, depth, classes, crop_h, crop_w, h, w, mean, std=None, stride_rate=2/3):
+    ori_h, ori_w, _ = image.shape
+    pad_h = max(crop_h - ori_h, 0)
+    pad_w = max(crop_w - ori_w, 0)
+    pad_h_half = int(pad_h / 2)
+    pad_w_half = int(pad_w / 2)
+    if pad_h > 0 or pad_w > 0:
+        image = cv2.copyMakeBorder(image, pad_h_half, pad_h - pad_h_half, pad_w_half, pad_w - pad_w_half, cv2.BORDER_CONSTANT, value=mean)
+        depth = cv2.copyMakeBorder(depth, pad_h_half, pad_h - pad_h_half, pad_w_half, pad_w - pad_w_half, cv2.BORDER_CONSTANT, value=mean)
+    new_h, new_w, _ = image.shape
+    stride_h = int(np.ceil(crop_h*stride_rate))
+    stride_w = int(np.ceil(crop_w*stride_rate))
+    grid_h = int(np.ceil(float(new_h-crop_h)/stride_h) + 1)
+    grid_w = int(np.ceil(float(new_w-crop_w)/stride_w) + 1)
+    prediction_crop = np.zeros((new_h, new_w, classes), dtype=float)
+    count_crop = np.zeros((new_h, new_w), dtype=float)
+    for index_h in range(0, grid_h):
+        for index_w in range(0, grid_w):
+            s_h = index_h * stride_h
+            e_h = min(s_h + crop_h, new_h)
+            s_h = e_h - crop_h
+            s_w = index_w * stride_w
+            e_w = min(s_w + crop_w, new_w)
+            s_w = e_w - crop_w
+            image_crop = image[s_h:e_h, s_w:e_w].copy()
+            depth_crop = depth[s_h:e_h, s_w:e_w].copy()
+            count_crop[s_h:e_h, s_w:e_w] += 1
+            prediction_crop[s_h:e_h, s_w:e_w, :] += net_process_d(model, image_crop, depth_crop, mean, std)
+    prediction_crop /= np.expand_dims(count_crop, 2)
+    prediction_crop = prediction_crop[pad_h_half:pad_h_half+ori_h, pad_w_half:pad_w_half+ori_w]
+    prediction = cv2.resize(prediction_crop, (w, h), interpolation=cv2.INTER_LINEAR)
+    return prediction
+
 
 
 def test(test_loader, data_list, model, classes, mean, std, base_size, crop_h, crop_w, scales, gray_folder, color_folder, colors):
@@ -223,6 +302,55 @@ def test(test_loader, data_list, model, classes, mean, std, base_size, crop_h, c
     logger.info('<<<<<<<<<<<<<<<<< End Evaluation <<<<<<<<<<<<<<<<<')
 
 
+def test_d(test_loader, data_list, model, classes, mean, std, base_size, crop_h, crop_w, scales, gray_folder, color_folder, colors):
+    logger.info('>>>>>>>>>>>>>>>> Start Evaluation >>>>>>>>>>>>>>>>')
+    data_time = AverageMeter()
+    batch_time = AverageMeter()
+    model.eval()
+    end = time.time()
+    for i, (image, depth, _) in enumerate(test_loader):
+        data_time.update(time.time() - end)
+        image = np.squeeze(image.numpy(), axis=0)
+        image = np.transpose(image, (1, 2, 0))
+        depth = np.squeeze(depth.numpy(), axis=0)
+        depth = np.transpose(depth, (1, 2, 0))
+        h, w, _ = image.shape
+        prediction = np.zeros((h, w, classes), dtype=float)
+        for scale in scales:
+            long_size = round(scale * base_size)
+            new_h = long_size
+            new_w = long_size
+            if h > w:
+                new_w = round(long_size/float(h)*w)
+            else:
+                new_h = round(long_size/float(w)*h)
+            image_scale = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+            depth_scale = cv2.resize(depth, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+            prediction += scale_process_d(model, image_scale, depth_scale, classes, crop_h, crop_w, h, w, mean, std)
+        prediction /= len(scales)
+        prediction = np.argmax(prediction, axis=2)
+        batch_time.update(time.time() - end)
+        end = time.time()
+        if ((i + 1) % 10 == 0) or (i + 1 == len(test_loader)):
+            logger.info('Test: [{}/{}] '
+                        'Data {data_time.val:.3f} ({data_time.avg:.3f}) '
+                        'Batch {batch_time.val:.3f} ({batch_time.avg:.3f}).'.format(i + 1, len(test_loader),
+                                                                                    data_time=data_time,
+                                                                                    batch_time=batch_time))
+        check_makedirs(gray_folder)
+        check_makedirs(color_folder)
+        gray = np.uint8(prediction)
+        color = colorize(gray, colors)
+        image_path, _, _ = data_list[i]
+        image_name = image_path.split('/')[-1].split('.')[0]
+        gray_path = os.path.join(gray_folder, image_name + '.png')
+        color_path = os.path.join(color_folder, image_name + '.png')
+        cv2.imwrite(gray_path, gray)
+        color.save(color_path)
+    logger.info('<<<<<<<<<<<<<<<<< End Evaluation <<<<<<<<<<<<<<<<<')
+
+
+
 def cal_acc(data_list, pred_folder, classes, names):
     intersection_meter = AverageMeter()
     union_meter = AverageMeter()
@@ -248,6 +376,34 @@ def cal_acc(data_list, pred_folder, classes, names):
     logger.info('Eval result: mIoU/mAcc/allAcc {:.4f}/{:.4f}/{:.4f}.'.format(mIoU, mAcc, allAcc))
     for i in range(classes):
         logger.info('Class_{} result: iou/accuracy {:.4f}/{:.4f}, name: {}.'.format(i, iou_class[i], accuracy_class[i], names[i]))
+
+
+def cal_acc_d(data_list, pred_folder, classes, names):
+    intersection_meter = AverageMeter()
+    union_meter = AverageMeter()
+    target_meter = AverageMeter()
+
+    for i, (image_path, _, target_path) in enumerate(data_list):
+        image_name = image_path.split('/')[-1].split('.')[0]
+        pred = cv2.imread(os.path.join(pred_folder, image_name+'.png'), cv2.IMREAD_GRAYSCALE)
+        target = cv2.imread(target_path, cv2.IMREAD_GRAYSCALE)
+        intersection, union, target = intersectionAndUnion(pred, target, classes)
+        intersection_meter.update(intersection)
+        union_meter.update(union)
+        target_meter.update(target)
+        accuracy = sum(intersection_meter.val) / (sum(target_meter.val) + 1e-10)
+        logger.info('Evaluating {0}/{1} on image {2}, accuracy {3:.4f}.'.format(i + 1, len(data_list), image_name+'.png', accuracy))
+
+    iou_class = intersection_meter.sum / (union_meter.sum + 1e-10)
+    accuracy_class = intersection_meter.sum / (target_meter.sum + 1e-10)
+    mIoU = np.mean(iou_class)
+    mAcc = np.mean(accuracy_class)
+    allAcc = sum(intersection_meter.sum) / (sum(target_meter.sum) + 1e-10)
+
+    logger.info('Eval result: mIoU/mAcc/allAcc {:.4f}/{:.4f}/{:.4f}.'.format(mIoU, mAcc, allAcc))
+    for i in range(classes):
+        logger.info('Class_{} result: iou/accuracy {:.4f}/{:.4f}, name: {}.'.format(i, iou_class[i], accuracy_class[i], names[i]))
+
 
 
 if __name__ == '__main__':

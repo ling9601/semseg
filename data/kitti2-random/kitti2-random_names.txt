@@ -1,0 +1,14 @@
+terrain
+sky
+tree
+vegetation
+building
+road
+guardrail
+trafficSign
+trafficLight
+pole
+misc
+truck
+car
+van
