@@ -51,6 +51,19 @@ def transform(random=False):
         cv2.imwrite(path.replace('classgt', 'label'), label)
 
 
+def check_transform():
+    path = 'dataset/kitti2-random/label/Scene20/30-deg-left/frames/classSegmentation/Camera_0/label+Scene20+30-deg-left+frames+classSegmentation+Camera_0+label_00680.png'
+    label = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+    unique_value = np.unique(label)
+    assert 12 in unique_value
+
+    paths = glob.glob('dataset/kitti2/label/*/*/*/*/*/*label_*.png')
+    for p in paths:
+        label = cv2.imread(p, cv2.IMREAD_GRAYSCALE)
+        unique_value = np.unique(label)
+        assert 12 not in unique_value, 'Please perform transform'
+
+
 def rename():
     paths = glob.glob('dataset/kitti2/*/*/*/*/*/*/*')
     for p in tqdm(paths):
