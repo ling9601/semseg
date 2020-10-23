@@ -139,10 +139,12 @@ def makeList_randomSplit(train_rate=0.9, variations=None, camera=0, is_depth=Fal
     else:
         with open(os.path.join(dst, 'train.txt'), 'w') as f:
             f.writelines(
-                [' '.join([rgb, depth, label]) + '\n' for rgb, depth, label in zip(rgb_names[:train_num], depth_names[:train_num], label_names[:train_num])])
+                [' '.join([rgb, depth, label]) + '\n' for rgb, depth, label in
+                 zip(rgb_names[:train_num], depth_names[:train_num], label_names[:train_num])])
         with open(os.path.join(dst, 'val.txt'), 'w') as f:
             f.writelines(
-                [' '.join([rgb, depth, label]) + '\n' for rgb, depth, label in zip(rgb_names[train_num:], depth_names[train_num:], label_names[train_num:])])
+                [' '.join([rgb, depth, label]) + '\n' for rgb, depth, label in
+                 zip(rgb_names[train_num:], depth_names[train_num:], label_names[train_num:])])
     print('train({}), val({})'.format(train_num, len(rgb_names) - train_num))
 
 
@@ -169,7 +171,7 @@ def makeList(variation=None, camera=0, is_depth=False):
                     depth_names.extend(
                         glob.glob(
                             'dataset/kitti2/normalized_3C_depth/Scene{}/{}/*/*/Camera_{}/*depth_*.png'.format(s, v,
-                                                                                                                 camera)))
+                                                                                                              camera)))
         rgb_names.sort()
         label_names.sort()
 
@@ -193,9 +195,11 @@ def makeList(variation=None, camera=0, is_depth=False):
                 )
             else:
                 f.writelines(
-                    [' '.join([rgb, depth, label]) + '\n' for rgb, depth, label in zip(rgb_names, depth_names, label_names)]
+                    [' '.join([rgb, depth, label]) + '\n' for rgb, depth, label in
+                     zip(rgb_names, depth_names, label_names)]
                 )
         print('{}({})'.format(section, len(rgb_names)))
+
 
 def normalize_depth():
     src_dir = 'dataset/kitti2/depth'
@@ -210,10 +214,6 @@ def normalize_depth():
         if not os.path.isdir(os.path.dirname(new_path)):
             os.makedirs(os.path.dirname(new_path))
         cv2.imwrite(new_path, normalized_3C_depth)
-
-
-def makeList_depth():
-    pass
 
 
 def visualize_class_distribution(scene='01'):
@@ -255,4 +255,4 @@ def visualize_class_distribution(scene='01'):
 
 
 if __name__ == '__main__':
-    transform(random=False)
+    makeList(is_depth=True)
