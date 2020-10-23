@@ -228,21 +228,23 @@ def main_worker(gpu, ngpus_per_node, argss):
         if args.distributed:
             train_sampler.set_epoch(epoch)
         if args.is_depth:
-            train_method = train_d
+            loss_train, aux_loss_train, aux_d_loss_train, mIoU_train, mAcc_train, allAcc_train = train_d(train_loader, model, optimizer, epoch)
         else:
-            train_method = train
-        loss_train, mIoU_train, mAcc_train, allAcc_train = train_method(train_loader, model, optimizer, epoch)
+            loss_train, mIoU_train, mAcc_train, allAcc_train = train(train_loader, model, optimizer, epoch)
         if main_process():
             writer.add_scalar('loss_train', loss_train, epoch_log)
             writer.add_scalar('mIoU_train', mIoU_train, epoch_log)
             writer.add_scalar('mAcc_train', mAcc_train, epoch_log)
             writer.add_scalar('allAcc_train', allAcc_train, epoch_log)
+            if args.is_depth:
+                writer.add_scalar('aux_loss_train', aux_loss_train, epoch_log)
+                writer.add_scalar('aux_d_loss_train', aux_d_loss_train, epoch_log)
 
         if (epoch_log % args.save_freq == 0) and main_process():
             filename = args.save_path + '/train_epoch_' + str(epoch_log) + '.pth'
             logger.info('Saving checkpoint to: ' + filename)
             torch.save({'epoch': epoch_log, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}, filename)
-            if epoch_log / args.save_freq > 2:
+            if epoch_log / args.save_freq > 2 and epoch_log % 10 != 0:
                 deletename = args.save_path + '/train_epoch_' + str(epoch_log - args.save_freq * 2) + '.pth'
                 os.remove(deletename)
         if args.evaluate:
@@ -448,7 +450,7 @@ def train_d(train_loader, model, optimizer, epoch):
     allAcc = sum(intersection_meter.sum) / (sum(target_meter.sum) + 1e-10)
     if main_process():
         logger.info('Train result at epoch [{}/{}]: mIoU/mAcc/allAcc {:.4f}/{:.4f}/{:.4f}.'.format(epoch+1, args.epochs, mIoU, mAcc, allAcc))
-    return main_loss_meter.avg, mIoU, mAcc, allAcc
+    return main_loss_meter.avg, aux_loss_meter.avg, aux_d_loss_meter.avg, mIoU, mAcc, allAcc
 
 
 def validate(val_loader, model, criterion):

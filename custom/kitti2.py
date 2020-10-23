@@ -58,7 +58,7 @@ def check_transform():
     assert 12 in unique_value
 
     paths = glob.glob('dataset/kitti2/label/*/*/*/*/*/*label_*.png')
-    for p in paths:
+    for p in tqdm(paths):
         label = cv2.imread(p, cv2.IMREAD_GRAYSCALE)
         unique_value = np.unique(label)
         assert 12 not in unique_value, 'Please perform transform'
@@ -151,7 +151,7 @@ def makeList_randomSplit(train_rate=0.9, variations=None, camera=0, is_depth=Fal
 def makeList(variation=None, camera=0, is_depth=False):
     if variation is None:
         variations = ['15-deg-left', '15-deg-right', 'clone']
-    dst = 'dataset/kitti2/list'
+    dst = 'dataset/kitti2/list-depth' if is_depth else 'dataset/kitti2/list'
     split = {
         'train': ['01', '06', '18', '20'],
         'val': ['02']
@@ -255,4 +255,4 @@ def visualize_class_distribution(scene='01'):
 
 
 if __name__ == '__main__':
-    makeList(is_depth=True)
+    makeList()
