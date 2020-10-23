@@ -62,7 +62,7 @@ summary/
 __pycache__/
 # data/
 back/
-#*.png
+*.png
 *.jpg
 *.log
 *.pth
