@@ -27,7 +27,8 @@ cv2.setNumThreads(0)
 def get_parser():
     parser = argparse.ArgumentParser(description='PyTorch Semantic Segmentation')
     parser.add_argument('--config', type=str, default='config/ade20k/ade20k_pspnet50.yaml', help='config file')
-    parser.add_argument('opts', help='see config/ade20k/ade20k_pspnet50.yaml for all options', default=None, nargs=argparse.REMAINDER)
+    parser.add_argument('opts', help='see config/ade20k/ade20k_pspnet50.yaml for all options', default=None,
+                        nargs=argparse.REMAINDER)
     args = parser.parse_args()
     assert args.config is not None
     cfg = config.load_cfg_from_cfg_file(args.config)
@@ -52,13 +53,14 @@ def worker_init_fn(worker_id):
 
 
 def main_process():
-    return not args.multiprocessing_distributed or (args.multiprocessing_distributed and args.rank % args.ngpus_per_node == 0)
+    return not args.multiprocessing_distributed or (
+                args.multiprocessing_distributed and args.rank % args.ngpus_per_node == 0)
 
 
 def check(args):
     assert args.classes > 1
     assert args.zoom_factor in [1, 2, 4, 8]
-    if args.arch == 'psp' or args.arch == 'fusePsp' or args.arch == 'deepFusePsp':
+    if args.arch in ['psp', 'fusePsp', 'deepFusePsp']:
         assert (args.train_h - 1) % 8 == 0 and (args.train_w - 1) % 8 == 0
     elif args.arch == 'psa':
         if args.compact:
@@ -66,7 +68,7 @@ def check(args):
             args.mask_w = (args.train_w - 1) // (8 * args.shrink_factor) + 1
         else:
             assert (args.mask_h is None and args.mask_w is None) or (
-                        args.mask_h is not None and args.mask_w is not None)
+                    args.mask_h is not None and args.mask_w is not None)
             if args.mask_h is None and args.mask_w is None:
                 args.mask_h = 2 * ((args.train_h - 1) // (8 * args.shrink_factor) + 1) - 1
                 args.mask_w = 2 * ((args.train_w - 1) // (8 * args.shrink_factor) + 1) - 1
@@ -116,7 +118,8 @@ def main_worker(gpu, ngpus_per_node, argss):
             args.rank = int(os.environ["RANK"])
         if args.multiprocessing_distributed:
             args.rank = args.rank * ngpus_per_node + gpu
-        dist.init_process_group(backend=args.dist_backend, init_method=args.dist_url, world_size=args.world_size, rank=args.rank)
+        dist.init_process_group(backend=args.dist_backend, init_method=args.dist_url, world_size=args.world_size,
+                                rank=args.rank)
 
     criterion = nn.CrossEntropyLoss(ignore_index=args.ignore_label)
     if args.arch == 'psp':
@@ -128,18 +131,22 @@ def main_worker(gpu, ngpus_per_node, argss):
         from model.psanet import PSANet
         model = PSANet(layers=args.layers, classes=args.classes, zoom_factor=args.zoom_factor, psa_type=args.psa_type,
                        compact=args.compact, shrink_factor=args.shrink_factor, mask_h=args.mask_h, mask_w=args.mask_w,
-                       normalization_factor=args.normalization_factor, psa_softmax=args.psa_softmax, criterion=criterion)
+                       normalization_factor=args.normalization_factor, psa_softmax=args.psa_softmax,
+                       criterion=criterion)
         modules_ori = [model.layer0, model.layer1, model.layer2, model.layer3, model.layer4]
         modules_new = [model.psa, model.cls, model.aux]
     elif args.arch == 'fusePsp':
         from model.fuse_pspnet import FusedPSPNet
         model = FusedPSPNet(layers=args.layers, classes=args.classes, zoom_factor=args.zoom_factor, criterion=criterion)
-        modules_ori = [model.layer0, model.layer1, model.layer2, model.layer3, model.layer4, model.layer0_d, model.layer1_d, model.layer3_d, model.layer4_d]
+        modules_ori = [model.layer0, model.layer1, model.layer2, model.layer3, model.layer4, model.layer0_d,
+                       model.layer1_d, model.layer3_d, model.layer4_d]
         modules_new = [model.ppm, model.cls, model.aux, model.aux_d]
     elif args.arch == 'deepFusePsp':
         from model.fuse_pspnet import DeepFusedPSPNet
-        model = DeepFusedPSPNet(layers=args.layers, classes=args.classes, zoom_factor=args.zoom_factor, criterion=criterion)
-        modules_ori = [model.layer0, model.layer1, model.layer2, model.layer3, model.layer4, model.layer0_d, model.layer1_d, model.layer3_d, model.layer4_d]
+        model = DeepFusedPSPNet(layers=args.layers, classes=args.classes, zoom_factor=args.zoom_factor,
+                                criterion=criterion)
+        modules_ori = [model.layer0, model.layer1, model.layer2, model.layer3, model.layer4, model.layer0_d,
+                       model.layer1_d, model.layer3_d, model.layer4_d]
         modules_new = [model.ppm, model.cls, model.aux, model.aux_d]
 
     params_list = []
@@ -210,30 +217,39 @@ def main_worker(gpu, ngpus_per_node, argss):
         transform.Crop([args.train_h, args.train_w], crop_type='rand', padding=mean, ignore_label=args.ignore_label),
         transform.ToTensor(),
         transform.Normalize(mean=mean, std=std)])
-    train_data = dataset.SemData(split='train', data_root=args.data_root, data_list=args.train_list, transform=train_transform, is_depth=args.is_depth)
+    train_data = dataset.SemData(split='train', data_root=args.data_root, data_list=args.train_list,
+                                 transform=train_transform, is_depth=args.is_depth)
     if args.distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_data)
     else:
         train_sampler = None
-    train_loader = torch.utils.data.DataLoader(train_data, batch_size=args.batch_size, shuffle=(train_sampler is None), num_workers=args.workers, pin_memory=True, sampler=train_sampler, drop_last=True)
+    train_loader = torch.utils.data.DataLoader(train_data, batch_size=args.batch_size, shuffle=(train_sampler is None),
+                                               num_workers=args.workers, pin_memory=True, sampler=train_sampler,
+                                               drop_last=True)
     if args.evaluate:
         val_transform = transform.Compose([
-            transform.Crop([args.train_h, args.train_w], crop_type='center', padding=mean, ignore_label=args.ignore_label),
+            transform.Crop([args.train_h, args.train_w], crop_type='center', padding=mean,
+                           ignore_label=args.ignore_label),
             transform.ToTensor(),
             transform.Normalize(mean=mean, std=std)])
-        val_data = dataset.SemData(split='val', data_root=args.data_root, data_list=args.val_list, transform=val_transform, is_depth=args.is_depth)
+        val_data = dataset.SemData(split='val', data_root=args.data_root, data_list=args.val_list,
+                                   transform=val_transform, is_depth=args.is_depth)
         if args.distributed:
             val_sampler = torch.utils.data.distributed.DistributedSampler(val_data)
         else:
             val_sampler = None
-        val_loader = torch.utils.data.DataLoader(val_data, batch_size=args.batch_size_val, shuffle=False, num_workers=args.workers, pin_memory=True, sampler=val_sampler)
+        val_loader = torch.utils.data.DataLoader(val_data, batch_size=args.batch_size_val, shuffle=False,
+                                                 num_workers=args.workers, pin_memory=True, sampler=val_sampler)
 
     for epoch in range(args.start_epoch, args.epochs):
         epoch_log = epoch + 1
         if args.distributed:
             train_sampler.set_epoch(epoch)
         if args.is_depth:
-            loss_train, aux_loss_train, aux_d_loss_train, mIoU_train, mAcc_train, allAcc_train = train_d(train_loader, model, optimizer, epoch)
+            loss_train, aux_loss_train, aux_d_loss_train, mIoU_train, mAcc_train, allAcc_train = train_d(train_loader,
+                                                                                                         model,
+                                                                                                         optimizer,
+                                                                                                         epoch)
         else:
             loss_train, mIoU_train, mAcc_train, allAcc_train = train(train_loader, model, optimizer, epoch)
         if main_process():
@@ -248,7 +264,8 @@ def main_worker(gpu, ngpus_per_node, argss):
         if (epoch_log % args.save_freq == 0) and main_process():
             filename = args.save_path + '/train_epoch_' + str(epoch_log) + '.pth'
             logger.info('Saving checkpoint to: ' + filename)
-            torch.save({'epoch': epoch_log, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}, filename)
+            torch.save({'epoch': epoch_log, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()},
+                       filename)
             if epoch_log / args.save_freq > 2 and epoch_log % 10 != 2:
                 deletename = args.save_path + '/train_epoch_' + str(epoch_log - args.save_freq * 2) + '.pth'
                 os.remove(deletename)
@@ -280,7 +297,8 @@ def train(train_loader, model, optimizer, epoch):
             h = int((target.size()[1] - 1) / 8 * args.zoom_factor + 1)
             w = int((target.size()[2] - 1) / 8 * args.zoom_factor + 1)
             # 'nearest' mode doesn't support align_corners mode and 'bilinear' mode is fine for downsampling
-            target = F.interpolate(target.unsqueeze(1).float(), size=(h, w), mode='bilinear', align_corners=True).squeeze(1).long()
+            target = F.interpolate(target.unsqueeze(1).float(), size=(h, w), mode='bilinear',
+                                   align_corners=True).squeeze(1).long()
         input = input.cuda(non_blocking=True)
         target = target.cuda(non_blocking=True)
         output, main_loss, aux_loss = model(input, target)
@@ -333,7 +351,7 @@ def train(train_loader, model, optimizer, epoch):
                         'MainLoss {main_loss_meter.val:.4f} '
                         'AuxLoss {aux_loss_meter.val:.4f} '
                         'Loss {loss_meter.val:.4f} '
-                        'Accuracy {accuracy:.4f}.'.format(epoch+1, args.epochs, i + 1, len(train_loader),
+                        'Accuracy {accuracy:.4f}.'.format(epoch + 1, args.epochs, i + 1, len(train_loader),
                                                           batch_time=batch_time,
                                                           data_time=data_time,
                                                           remain_time=remain_time,
@@ -353,7 +371,9 @@ def train(train_loader, model, optimizer, epoch):
     mAcc = np.mean(accuracy_class)
     allAcc = sum(intersection_meter.sum) / (sum(target_meter.sum) + 1e-10)
     if main_process():
-        logger.info('Train result at epoch [{}/{}]: mIoU/mAcc/allAcc {:.4f}/{:.4f}/{:.4f}.'.format(epoch+1, args.epochs, mIoU, mAcc, allAcc))
+        logger.info(
+            'Train result at epoch [{}/{}]: mIoU/mAcc/allAcc {:.4f}/{:.4f}/{:.4f}.'.format(epoch + 1, args.epochs, mIoU,
+                                                                                           mAcc, allAcc))
     return main_loss_meter.avg, mIoU, mAcc, allAcc
 
 
@@ -377,7 +397,8 @@ def train_d(train_loader, model, optimizer, epoch):
             h = int((target.size()[1] - 1) / 8 * args.zoom_factor + 1)
             w = int((target.size()[2] - 1) / 8 * args.zoom_factor + 1)
             # 'nearest' mode doesn't support align_corners mode and 'bilinear' mode is fine for downsampling
-            target = F.interpolate(target.unsqueeze(1).float(), size=(h, w), mode='bilinear', align_corners=True).squeeze(1).long()
+            target = F.interpolate(target.unsqueeze(1).float(), size=(h, w), mode='bilinear',
+                                   align_corners=True).squeeze(1).long()
         image = image.cuda(non_blocking=True)
         depth = depth.cuda(non_blocking=True)
         target = target.cuda(non_blocking=True)
@@ -394,7 +415,8 @@ def train_d(train_loader, model, optimizer, epoch):
         if args.multiprocessing_distributed:
             main_loss, aux_loss, aux_d_loss, loss = main_loss.detach() * n, aux_loss * n, aux_d_loss * n, loss * n  # not considering ignore pixels
             count = target.new_tensor([n], dtype=torch.long)
-            dist.all_reduce(main_loss), dist.all_reduce(aux_loss), dist.all_reduce(aux_d_loss), dist.all_reduce(loss), dist.all_reduce(count)
+            dist.all_reduce(main_loss), dist.all_reduce(aux_loss), dist.all_reduce(aux_d_loss), dist.all_reduce(
+                loss), dist.all_reduce(count)
             n = count.item()
             main_loss, aux_loss, aux_d_loss, loss = main_loss / n, aux_loss / n, aux_d_loss / n, loss / n
 
@@ -433,7 +455,7 @@ def train_d(train_loader, model, optimizer, epoch):
                         'AuxLoss {aux_loss_meter.val:.4f} '
                         'Aux_d_Loss {aux_d_loss_meter.val:.4f} '
                         'Loss {loss_meter.val:.4f} '
-                        'Accuracy {accuracy:.4f}.'.format(epoch+1, args.epochs, i + 1, len(train_loader),
+                        'Accuracy {accuracy:.4f}.'.format(epoch + 1, args.epochs, i + 1, len(train_loader),
                                                           batch_time=batch_time,
                                                           data_time=data_time,
                                                           remain_time=remain_time,
@@ -454,7 +476,9 @@ def train_d(train_loader, model, optimizer, epoch):
     mAcc = np.mean(accuracy_class)
     allAcc = sum(intersection_meter.sum) / (sum(target_meter.sum) + 1e-10)
     if main_process():
-        logger.info('Train result at epoch [{}/{}]: mIoU/mAcc/allAcc {:.4f}/{:.4f}/{:.4f}.'.format(epoch+1, args.epochs, mIoU, mAcc, allAcc))
+        logger.info(
+            'Train result at epoch [{}/{}]: mIoU/mAcc/allAcc {:.4f}/{:.4f}/{:.4f}.'.format(epoch + 1, args.epochs, mIoU,
+                                                                                           mAcc, allAcc))
     return main_loss_meter.avg, aux_loss_meter.avg, aux_d_loss_meter.avg, mIoU, mAcc, allAcc
 
 
