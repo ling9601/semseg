@@ -43,7 +43,7 @@ Distributed:
   rank: 0
 
 TEST:
-  test_list: dataset/kitti2/list/val.txt
+  test_list: dataset/kitti2/list-depth/val.txt
   split: val  # split in [train, val and test]
   base_size: 1242  # based size for scaling
   test_h: 321

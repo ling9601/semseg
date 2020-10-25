@@ -113,6 +113,12 @@ def main():
             from model.fuse_pspnet import FusedPSPNet
             model = FusedPSPNet(layers=args.layers, classes=args.classes, zoom_factor=args.zoom_factor,
                                 pretrained=False)
+        elif args.arch == 'deepFusePsp':
+            from model.fuse_pspnet import DeepFusedPSPNet
+            model = DeepFusedPSPNet(layers=args.layers, classes=args.classes, zoom_factor=args.zoom_factor,
+                                pretrained=False)
+        else:
+            raise NotImplemented('Not implemented model {}'.format(args.arch))
         logger.info(model)
         model = torch.nn.DataParallel(model).cuda()
         cudnn.benchmark = True
