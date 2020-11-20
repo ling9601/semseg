@@ -20,6 +20,8 @@ from tensorboardX import SummaryWriter
 from util import dataset, transform, config
 from util.util import AverageMeter, poly_learning_rate, intersectionAndUnionGPU, find_free_port
 
+from custom.focal_loss import FocalLoss2d
+
 cv2.ocl.setUseOpenCL(False)
 cv2.setNumThreads(0)
 
@@ -121,7 +123,11 @@ def main_worker(gpu, ngpus_per_node, argss):
         dist.init_process_group(backend=args.dist_backend, init_method=args.dist_url, world_size=args.world_size,
                                 rank=args.rank)
 
-    criterion = nn.CrossEntropyLoss(ignore_index=args.ignore_label)
+    if args.use_focal_loss:
+        criterion = FocalLoss2d(ignore_label=args.ignore_label)
+    else:
+        criterion = nn.CrossEntropyLoss(ignore_index=args.ignore_label)
+
     if args.arch == 'psp':
         from model.pspnet import PSPNet
         model = PSPNet(layers=args.layers, classes=args.classes, zoom_factor=args.zoom_factor, criterion=criterion)

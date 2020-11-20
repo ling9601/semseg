@@ -3,10 +3,11 @@ import re
 import matplotlib.pyplot as plt
 import numpy as np
 
-log_dir = 'exp/kitti2/{}/result/test-*-*.log'
+log_dir = 'exp/kitti2/{}/result/sub/test-*-*.log'
 
-log_paths = glob.glob(log_dir.format('fusepspnet50'))
+log_paths = glob.glob(log_dir.format('deepfusepspnet50'))
 log_paths.sort()
+log_paths = log_paths[:12]
 
 result = {
     'mIoU': [],
@@ -21,8 +22,9 @@ for path in log_paths:
     result['mAcc'].append(float(ret[1]))
     result['allAcc'].append(float(ret[2]))
 
-xs = np.arange(10, 151, 10)
+xs = np.arange(10, len(log_paths)*10+1, 10)
 plt.plot(xs, result['mIoU'])
 # plt.plot(xs, result['mAcc'])
 # plt.plot(xs, result['allAcc'])
+plt.savefig('tmp.png')
 plt.show()

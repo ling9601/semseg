@@ -1,7 +1,7 @@
 import glob
 import re
 
-path = "exp/kitti2/deepfusepspnet50/result/test-20201118_153830.log"
+path = "exp/kitti2/fusepspnet50/result/test-20201110_143027.log"
 
 with open(path) as f:
     lines = f.readlines()[-12:]

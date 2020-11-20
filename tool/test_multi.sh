@@ -21,7 +21,7 @@ cp tool/test.sh tool/test.py ${config} ${exp_dir}
 
 export PYTHONPATH=./
 
-for ep in 10 20 30 40 50 60 70 80 90 100 110 120 130 140 150
+for ep in 10 20 30 40 50 60 70 80 90 100 110 120
 do
   now=$(date +"%Y%m%d_%H%M%S")
   $PYTHON -u ${exp_dir}/test.py \
