@@ -62,7 +62,7 @@ def main_process():
 def check(args):
     assert args.classes > 1
     assert args.zoom_factor in [1, 2, 4, 8]
-    if args.arch in ['psp', 'fusePsp', 'deepFusePsp']:
+    if args.arch in ['psp', 'fusePsp', 'deepFusePsp', 'shallowFusePsp']:
         assert (args.train_h - 1) % 8 == 0 and (args.train_w - 1) % 8 == 0
     elif args.arch == 'psa':
         if args.compact:
@@ -154,6 +154,12 @@ def main_worker(gpu, ngpus_per_node, argss):
         modules_ori = [model.layer0, model.layer1, model.layer2, model.layer3, model.layer4, model.layer0_d,
                        model.layer1_d, model.layer3_d, model.layer4_d]
         modules_new = [model.ppm, model.cls, model.aux, model.aux_d]
+    elif args.arch == 'shallowFusePsp':
+        from model.fuse_pspnet import ShallowFusedPSPNet
+        model = ShallowFusedPSPNet(layers=args.layers, classes=args.classes, zoom_factor=args.zoom_factor,
+                                criterion=criterion)
+        modules_ori = [model.layer0, model.layer1, model.layer2, model.layer3, model.layer4, model.layer0_d]
+        modules_new = [model.ppm, model.cls, model.aux]
 
     params_list = []
     for module in modules_ori:
