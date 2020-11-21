@@ -45,7 +45,7 @@ def check(args):
     assert args.classes > 1
     assert args.zoom_factor in [1, 2, 4, 8]
     assert args.split in ['train', 'val', 'test']
-    if args.arch in ['psp', 'fusePsp', 'deepFusePsp']:
+    if args.arch in ['psp', 'fusePsp', 'deepFusePsp', 'shallowFusePsp']:
         assert (args.train_h - 1) % 8 == 0 and (args.train_w - 1) % 8 == 0
     elif args.arch == 'psa':
         if args.compact:
@@ -116,6 +116,10 @@ def main():
         elif args.arch == 'deepFusePsp':
             from model.fuse_pspnet import DeepFusedPSPNet
             model = DeepFusedPSPNet(layers=args.layers, classes=args.classes, zoom_factor=args.zoom_factor,
+                                pretrained=False)
+        elif args.arch == 'shallowFusePsp':
+            from model.fuse_pspnet import ShallowFusedPSPNet
+            model = ShallowFusedPSPNet(layers=args.layers, classes=args.classes, zoom_factor=args.zoom_factor,
                                 pretrained=False)
         else:
             raise NotImplemented('Not implemented model {}'.format(args.arch))
