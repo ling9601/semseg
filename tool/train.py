@@ -62,7 +62,7 @@ def main_process():
 def check(args):
     assert args.classes > 1
     assert args.zoom_factor in [1, 2, 4, 8]
-    if args.arch in ['psp', 'fusePsp', 'deepFusePsp', 'shallowFusePsp']:
+    if args.arch in ['psp', 'fusePsp', 'deepFusePsp', 'shallowFusePsp', 'attentionFusedPsp']:
         assert (args.train_h - 1) % 8 == 0 and (args.train_w - 1) % 8 == 0
     elif args.arch == 'psa':
         if args.compact:
@@ -160,6 +160,13 @@ def main_worker(gpu, ngpus_per_node, argss):
                                 criterion=criterion)
         modules_ori = [model.layer0, model.layer1, model.layer2, model.layer3, model.layer4, model.layer0_d]
         modules_new = [model.ppm, model.cls, model.aux]
+    elif args.arch == 'attentionFusedPsp':
+        from model.fuse_pspnet import AttentionFusedPSPNet
+        model = AttentionFusedPSPNet(layers=args.layers, classes=args.classes, zoom_factor=args.zoom_factor,
+                                criterion=criterion)
+        modules_ori = [model.layer0, model.layer1, model.layer2, model.layer3, model.layer4, model.layer0_d]
+        modules_new = [model.ppm, model.cls, model.aux, model.attention_rgb, model.attention_depth]
+
 
     params_list = []
     for module in modules_ori:
