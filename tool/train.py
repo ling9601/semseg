@@ -56,13 +56,13 @@ def worker_init_fn(worker_id):
 
 def main_process():
     return not args.multiprocessing_distributed or (
-                args.multiprocessing_distributed and args.rank % args.ngpus_per_node == 0)
+            args.multiprocessing_distributed and args.rank % args.ngpus_per_node == 0)
 
 
 def check(args):
     assert args.classes > 1
     assert args.zoom_factor in [1, 2, 4, 8]
-    if args.arch in ['psp', 'fusePsp', 'deepFusePsp', 'shallowFusePsp', 'attentionFusedPsp']:
+    if args.arch in ['psp', 'fusePsp', 'deepFusePsp', 'shallowFusePsp', 'attentionFusedPsp', 'attention_v1_FusedPsp']:
         assert (args.train_h - 1) % 8 == 0 and (args.train_w - 1) % 8 == 0
     elif args.arch == 'psa':
         if args.compact:
@@ -157,16 +157,24 @@ def main_worker(gpu, ngpus_per_node, argss):
     elif args.arch == 'shallowFusePsp':
         from model.fuse_pspnet import ShallowFusedPSPNet
         model = ShallowFusedPSPNet(layers=args.layers, classes=args.classes, zoom_factor=args.zoom_factor,
-                                criterion=criterion)
+                                   criterion=criterion)
         modules_ori = [model.layer0, model.layer1, model.layer2, model.layer3, model.layer4, model.layer0_d]
         modules_new = [model.ppm, model.cls, model.aux]
     elif args.arch == 'attentionFusedPsp':
         from model.fuse_pspnet import AttentionFusedPSPNet
         model = AttentionFusedPSPNet(layers=args.layers, classes=args.classes, zoom_factor=args.zoom_factor,
-                                criterion=criterion)
-        modules_ori = [model.layer0, model.layer1, model.layer2, model.layer3, model.layer4, model.layer0_d]
-        modules_new = [model.ppm, model.cls, model.aux, model.attention_rgb, model.attention_depth]
-
+                                     criterion=criterion)
+        modules_ori = [model.layer0, model.layer1, model.layer2, model.layer3, model.layer4, model.layer0_d,
+                       model.layer1_d, model.layer3_d, model.layer4_d]
+        modules_new = [model.ppm, model.cls, model.aux, model.aux_d, model.attention_rgb, model.attention_depth]
+    elif args.arch == 'attention_v1_FusedPsp':
+        from model.fuse_pspnet import Attention_v1_FusedPSPNet
+        model = Attention_v1_FusedPSPNet(layers=args.layers, classes=args.classes, zoom_factor=args.zoom_factor,
+                                         criterion=criterion)
+        modules_ori = [model.layer0, model.layer1, model.layer2, model.layer3, model.layer4, model.layer0_d,
+                       model.layer1_d, model.layer3_d, model.layer4_d]
+        modules_new = [model.ppm, model.cls, model.aux, model.aux_d, model.attention_rgb, model.attention_depth,
+                       model.agant]
 
     params_list = []
     for module in modules_ori:
