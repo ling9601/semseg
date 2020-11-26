@@ -12,6 +12,7 @@ PYTHON=python
 
 dataset=$1
 exp_name=$2
+upper=$3
 exp_dir=exp/${dataset}/${exp_name}
 result_dir=${exp_dir}/result
 config=config/${dataset}/${dataset}_${exp_name}.yaml
@@ -21,8 +22,9 @@ cp tool/test.sh tool/test.py ${config} ${exp_dir}
 
 export PYTHONPATH=./
 
-for ep in 10 20 30 40 50 60 70 80 90 100 110 120 130 140 150 160 170 180 190 200
+for i in $(seq ${upper} $END)
 do
+  ep=$((i*10))
   now=$(date +"%Y%m%d_%H%M%S")
   $PYTHON -u ${exp_dir}/test.py \
   --config=${config} \
