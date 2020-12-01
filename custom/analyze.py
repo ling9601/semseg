@@ -2,12 +2,17 @@ import glob
 import re
 import matplotlib.pyplot as plt
 import numpy as np
+import sys
+import os
 
-log_dir = 'exp/kitti2/{}/result/sub/test-*-*.log'
+assert len(sys.argv) == 2
+model_name = sys.argv[1]
 
-log_paths = glob.glob(log_dir.format('deepfusepspnet50'))
+log_dir = f'exp/kitti2/{model_name}/result'
+assert os.path.isdir(log_dir)
+
+log_paths = glob.glob(f'{log_dir}/test-*-*.log')
 log_paths.sort()
-log_paths = log_paths[:12]
 
 result = {
     'mIoU': [],
