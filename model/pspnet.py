@@ -107,6 +107,7 @@ class PSPNet(nn.Module):
 
 if __name__ == '__main__':
     import os
+    from torchsummary import summary
     os.environ["CUDA_VISIBLE_DEVICES"] = '0, 1'
     input = torch.rand(4, 3, 473, 473).cuda()
     model = PSPNet(layers=50, bins=(1, 2, 3, 6), dropout=0.1, classes=21, zoom_factor=1, use_ppm=True, pretrained=True).cuda()
@@ -114,3 +115,4 @@ if __name__ == '__main__':
     print(model)
     output = model(input)
     print('PSPNet', output.size())
+    summary(model, (3, 473, 473))

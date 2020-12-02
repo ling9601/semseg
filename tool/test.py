@@ -45,7 +45,8 @@ def check(args):
     assert args.classes > 1
     assert args.zoom_factor in [1, 2, 4, 8]
     assert args.split in ['train', 'val', 'test']
-    if args.arch in ['psp', 'fusePsp', 'deepFusePsp', 'shallowFusePsp', 'attentionFusedPsp', 'attention_v1_FusedPsp']:
+    if args.arch in ['psp', 'fusePsp', 'deepFusePsp', 'shallowFusePsp', 'attentionFusedPsp', 'attention_v1_FusedPsp',
+                     'attention_v2_FusedPsp']:
         assert (args.train_h - 1) % 8 == 0 and (args.train_w - 1) % 8 == 0
     elif args.arch == 'psa':
         if args.compact:
@@ -53,7 +54,7 @@ def check(args):
             args.mask_w = (args.train_w - 1) // (8 * args.shrink_factor) + 1
         else:
             assert (args.mask_h is None and args.mask_w is None) or (
-                        args.mask_h is not None and args.mask_w is not None)
+                    args.mask_h is not None and args.mask_w is not None)
             if args.mask_h is None and args.mask_w is None:
                 args.mask_h = 2 * ((args.train_h - 1) // (8 * args.shrink_factor) + 1) - 1
                 args.mask_w = 2 * ((args.train_w - 1) // (8 * args.shrink_factor) + 1) - 1
@@ -116,19 +117,23 @@ def main():
         elif args.arch == 'deepFusePsp':
             from model.fuse_pspnet import DeepFusedPSPNet
             model = DeepFusedPSPNet(layers=args.layers, classes=args.classes, zoom_factor=args.zoom_factor,
-                                pretrained=False)
+                                    pretrained=False)
         elif args.arch == 'shallowFusePsp':
             from model.fuse_pspnet import ShallowFusedPSPNet
             model = ShallowFusedPSPNet(layers=args.layers, classes=args.classes, zoom_factor=args.zoom_factor,
-                                pretrained=False)
+                                       pretrained=False)
         elif args.arch == 'attentionFusedPsp':
             from model.fuse_pspnet import AttentionFusedPSPNet
             model = AttentionFusedPSPNet(layers=args.layers, classes=args.classes, zoom_factor=args.zoom_factor,
-                                pretrained=False)
+                                         pretrained=False)
         elif args.arch == 'attention_v1_FusedPsp':
             from model.fuse_pspnet import Attention_v1_FusedPSPNet
             model = Attention_v1_FusedPSPNet(layers=args.layers, classes=args.classes, zoom_factor=args.zoom_factor,
-                                pretrained=False)
+                                             pretrained=False)
+        elif args.arch == 'attention_v2_FusedPsp':
+            from model.fuse_pspnet import Attention_v2_FusedPSPNet
+            model = Attention_v2_FusedPSPNet(layers=args.layers, classes=args.classes, zoom_factor=args.zoom_factor,
+                                             pretrained=False)
         else:
             raise NotImplemented('Not implemented model {}'.format(args.arch))
         logger.info(model)

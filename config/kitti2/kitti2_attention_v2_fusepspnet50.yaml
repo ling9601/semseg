@@ -5,7 +5,7 @@ DATA:
   classes: 12
 
 TRAIN:
-  arch: attentionFusedPsp
+  arch: attention_v2_FusedPsp
   layers: 50
   sync_bn: True  # adopt syncbn or not
   train_h: 321
@@ -30,7 +30,7 @@ TRAIN:
   manual_seed:
   print_freq: 10
   save_freq: 1
-  save_path: exp/kitti2/attentionfusepspnet50/model
+  save_path: exp/kitti2/attention_v2_fusepspnet50/model
   weight:  # path to initial weight (default: none)
   resume:  # path to latest checkpoint (default: none)
   evaluate: False  # evaluate on validation set, extra gpu memory needed and small batch_size_val is recommend
@@ -54,7 +54,7 @@ TEST:
   index_start: 0  # evaluation start index in list
   index_step: 0  # evaluation step index in list, 0 means to end
   test_gpu: [0,1]
-  model_path: exp/kitti2/attentionfusepspnet50/model/train_epoch_150.pth  # evaluation model path
-  save_folder: exp/kitti2/attentionfusepspnet50/result/epoch_150/val/ss  # results save folder
+  model_path: exp/kitti2/attention_v2_fusepspnet50/model/train_epoch_150.pth  # evaluation model path
+  save_folder: exp/kitti2/attention_v2_fusepspnet50/result/epoch_150/val/ss  # results save folder
   colors_path: data/kitti2/kitti2_colors.txt  # path of dataset colors
   names_path: data/kitti2/kitti2_names.txt  # path of dataset category names
