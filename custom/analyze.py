@@ -22,7 +22,7 @@ result = {
 
 for path in log_paths:
     line = open(path, 'r').readlines()[-13]
-    ret = re.findall(r"0.\d{4}", line)
+    ret = re.findall(r"0\.\d{4}", line)
     result['mIoU'].append(float(ret[0]))
     result['mAcc'].append(float(ret[1]))
     result['allAcc'].append(float(ret[2]))
