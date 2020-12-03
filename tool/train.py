@@ -63,7 +63,7 @@ def check(args):
     assert args.classes > 1
     assert args.zoom_factor in [1, 2, 4, 8]
     if args.arch in ['psp', 'fusePsp', 'deepFusePsp', 'shallowFusePsp', 'attentionFusedPsp', 'attention_v1_FusedPsp',
-                     'attention_v2_FusedPsp']:
+                     'attention_v2_FusedPsp', 'attention_v3_FusedPsp']:
         assert (args.train_h - 1) % 8 == 0 and (args.train_w - 1) % 8 == 0
     elif args.arch == 'psa':
         if args.compact:
@@ -184,6 +184,13 @@ def main_worker(gpu, ngpus_per_node, argss):
                        model.layer1_d, model.layer3_d, model.layer4_d]
         modules_new = [model.ppm, model.cls, model.aux, model.aux_d, model.a_0, model.a_0_d, model.a_1, model.a_1_d,
                        model.a_2, model.a_2_d, model.a_3, model.a_3_d, model.a_4, model.a_4_d, model.agant]
+    elif args.arch == 'attention_v3_FusedPsp':
+        from model.fuse_pspnet import Attention_v3_FusedPSPNet
+        model = Attention_v3_FusedPSPNet(layers=args.layers, classes=args.classes, zoom_factor=args.zoom_factor,
+                                         criterion=criterion)
+        modules_ori = [model.layer0, model.layer1, model.layer2, model.layer3, model.layer4, model.layer0_d,
+                       model.layer1_d, model.layer3_d, model.layer4_d]
+        modules_new = [model.ppm, model.cls, model.aux, model.aux_d]
 
     params_list = []
     for module in modules_ori:

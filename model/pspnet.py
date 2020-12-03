@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
+import copy
 
 import model.resnet as models
 
@@ -26,8 +27,39 @@ class PPM(nn.Module):
         return torch.cat(out, 1)
 
 
+def channel_attention(num_channel):
+    pool = nn.AdaptiveAvgPool2d(1)
+    conv = nn.Conv2d(num_channel, num_channel, kernel_size=1)
+    activation = nn.Sigmoid()
+    return nn.Sequential(*[pool, conv, activation])
+
+
+class PPM_v2(PPM):
+    def __init__(self, in_dim, reduction_dim, bins):
+        super(PPM_v2, self).__init__(in_dim, reduction_dim, bins)
+        self.attentions = []
+        for _ in bins:
+            self.attentions.append(channel_attention(reduction_dim))
+        self.features_d = copy.deepcopy(self.features)
+        self.attentions_d = copy.deepcopy(self.attentions)
+
+    def forward(self, x, x_d):
+        x_size = x.size()
+        out = [x, x_d]
+        for f, a, f_d, a_d in zip(self.features, self.attentions, self.features_d, self.attentions_d):
+            y = f(x)
+            attention_y = a(y)
+            y = y.mul(attention_y)
+            y_d = f(x_d)
+            attention_y_d = a(y_d)
+            y_d = y_d.mul(attention_y_d)
+            out.append(F.interpolate(y + y_d, x_size[2:], mode='bilinear', align_corners=True))
+        return torch.cat(out, 1)
+
+
 class PSPNet(nn.Module):
-    def __init__(self, layers=50, bins=(1, 2, 3, 6), dropout=0.1, classes=2, zoom_factor=8, use_ppm=True, criterion=nn.CrossEntropyLoss(ignore_index=255), pretrained=True):
+    def __init__(self, layers=50, bins=(1, 2, 3, 6), dropout=0.1, classes=2, zoom_factor=8, use_ppm=True,
+                 criterion=nn.CrossEntropyLoss(ignore_index=255), pretrained=True):
         super(PSPNet, self).__init__()
         assert layers in [50, 101, 152]
         assert 2048 % len(bins) == 0
@@ -43,7 +75,8 @@ class PSPNet(nn.Module):
             resnet = models.resnet101(pretrained=pretrained)
         else:
             resnet = models.resnet152(pretrained=pretrained)
-        self.layer0 = nn.Sequential(resnet.conv1, resnet.bn1, resnet.relu, resnet.conv2, resnet.bn2, resnet.relu, resnet.conv3, resnet.bn3, resnet.relu, resnet.maxpool)
+        self.layer0 = nn.Sequential(resnet.conv1, resnet.bn1, resnet.relu, resnet.conv2, resnet.bn2, resnet.relu,
+                                    resnet.conv3, resnet.bn3, resnet.relu, resnet.maxpool)
         self.layer1, self.layer2, self.layer3, self.layer4 = resnet.layer1, resnet.layer2, resnet.layer3, resnet.layer4
 
         for n, m in self.layer3.named_modules():
@@ -59,7 +92,7 @@ class PSPNet(nn.Module):
 
         fea_dim = 2048
         if use_ppm:
-            self.ppm = PPM(fea_dim, int(fea_dim/len(bins)), bins)
+            self.ppm = PPM(fea_dim, int(fea_dim / len(bins)), bins)
             fea_dim *= 2
         self.cls = nn.Sequential(
             nn.Conv2d(fea_dim, 512, kernel_size=3, padding=1, bias=False),
@@ -79,7 +112,7 @@ class PSPNet(nn.Module):
 
     def forward(self, x, y=None):
         x_size = x.size()
-        assert (x_size[2]-1) % 8 == 0 and (x_size[3]-1) % 8 == 0
+        assert (x_size[2] - 1) % 8 == 0 and (x_size[3] - 1) % 8 == 0
         h = int((x_size[2] - 1) / 8 * self.zoom_factor + 1)
         w = int((x_size[3] - 1) / 8 * self.zoom_factor + 1)
 
@@ -108,9 +141,11 @@ class PSPNet(nn.Module):
 if __name__ == '__main__':
     import os
     from torchsummary import summary
+
     os.environ["CUDA_VISIBLE_DEVICES"] = '0, 1'
     input = torch.rand(4, 3, 473, 473).cuda()
-    model = PSPNet(layers=50, bins=(1, 2, 3, 6), dropout=0.1, classes=21, zoom_factor=1, use_ppm=True, pretrained=True).cuda()
+    model = PSPNet(layers=50, bins=(1, 2, 3, 6), dropout=0.1, classes=21, zoom_factor=1, use_ppm=True,
+                   pretrained=True).cuda()
     model.eval()
     print(model)
     output = model(input)

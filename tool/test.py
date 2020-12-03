@@ -46,7 +46,7 @@ def check(args):
     assert args.zoom_factor in [1, 2, 4, 8]
     assert args.split in ['train', 'val', 'test']
     if args.arch in ['psp', 'fusePsp', 'deepFusePsp', 'shallowFusePsp', 'attentionFusedPsp', 'attention_v1_FusedPsp',
-                     'attention_v2_FusedPsp']:
+                     'attention_v2_FusedPsp', 'attention_v3_FusedPsp']:
         assert (args.train_h - 1) % 8 == 0 and (args.train_w - 1) % 8 == 0
     elif args.arch == 'psa':
         if args.compact:
@@ -133,6 +133,10 @@ def main():
         elif args.arch == 'attention_v2_FusedPsp':
             from model.fuse_pspnet import Attention_v2_FusedPSPNet
             model = Attention_v2_FusedPSPNet(layers=args.layers, classes=args.classes, zoom_factor=args.zoom_factor,
+                                             pretrained=False)
+        elif args.arch == 'attention_v3_FusedPsp':
+            from model.fuse_pspnet import Attention_v3_FusedPSPNet
+            model = Attention_v3_FusedPSPNet(layers=args.layers, classes=args.classes, zoom_factor=args.zoom_factor,
                                              pretrained=False)
         else:
             raise NotImplemented('Not implemented model {}'.format(args.arch))
