@@ -548,8 +548,6 @@ class Attention_v3_FusedPSPNet(nn.Module):
         if self.use_ppm:
             x = self.ppm(x, x_d)
         x = self.cls(x)
-
-        x = self.cls(x)
         if self.zoom_factor != 1:
             x = F.interpolate(x, size=(h, w), mode='bilinear', align_corners=True)
 

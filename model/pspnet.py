@@ -40,6 +40,7 @@ class PPM_v2(PPM):
         self.attentions = []
         for _ in bins:
             self.attentions.append(channel_attention(reduction_dim))
+        self.attentions = nn.ModuleList(self.attentions)
         self.features_d = copy.deepcopy(self.features)
         self.attentions_d = copy.deepcopy(self.attentions)
 
@@ -47,13 +48,12 @@ class PPM_v2(PPM):
         x_size = x.size()
         out = [x, x_d]
         for f, a, f_d, a_d in zip(self.features, self.attentions, self.features_d, self.attentions_d):
-            y = f(x)
-            attention_y = a(y)
-            y = y.mul(attention_y)
-            y_d = f(x_d)
-            attention_y_d = a(y_d)
-            y_d = y_d.mul(attention_y_d)
-            out.append(F.interpolate(y + y_d, x_size[2:], mode='bilinear', align_corners=True))
+            rgb = f(x)
+            depth = f_d(x_d)
+            atten_rgb = a(rgb)
+            atten_depth = a_d(depth)
+            y = rgb.mul(atten_rgb) + depth.mul(atten_depth)
+            out.append(F.interpolate(y, x_size[2:], mode='bilinear', align_corners=True))
         return torch.cat(out, 1)
 
 
