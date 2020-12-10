@@ -4,8 +4,9 @@ import matplotlib.pyplot as plt
 from imageio import imread, imwrite
 import numpy as np
 from collections import OrderedDict
+import time
 
-dataset_path = '../dataset/cityscapes'
+dataset_path = 'dataset/cityscapes'
 
 
 class Point:
@@ -53,7 +54,7 @@ def fill(depth):
     h, w = depth.shape
     for y in range(h):
         for x in range(w):
-            if depth[y, x] == 0:
+            if depth[y, x] == np.inf:
                 p = get_point(point_dict, (x, y))
                 for dy in [-1, 0, 1]:
                     for dx in [-1, 0, 1]:
@@ -63,7 +64,7 @@ def fill(depth):
                         ny = y + dy
                         if nx < 0 or ny < 0 or nx >= w or ny >= h:
                             continue
-                        if depth[ny, nx] == 0:
+                        if depth[ny, nx] == np.inf:
                             sp = get_point(point_dict, (nx, ny))
                             p.add_surrounding_point(sp)
                         else:
@@ -88,19 +89,21 @@ def fill(depth):
     return depth
 
 
-def visualize_disparity():
-    def DisparityToDepth(disp):
-        disp[disp > 0] = (disp[disp > 0] - 1) / 256
-        disp[disp > 0] = (0.209313 * 2262.52) / disp[disp > 0]
-        return disp
+def DisparityToDepth(disp):
+    disp[disp > 0] = (disp[disp > 0] - 1) / 256
+    disp = (0.209313 * 2262.52) / disp
+    return disp
 
+
+def visualize_disparity():
     disparity_path = sorted(glob.glob(os.path.join(dataset_path, 'disparity', '*', '*', '*disparity.png')))
     rgb_path = sorted(glob.glob(os.path.join(dataset_path, 'leftImg8bit', '*', '*', '*leftImg8bit.png')))
     rgb = imread(rgb_path[0])
-    disp = imread(disparity_path[0])
+    disp = imread(disparity_path[0]).astype(np.float32)
+    st = time.time()
     depth = DisparityToDepth(disp.copy())
-
     new_depth = fill(depth.copy())
+    print(time.time() - st)
 
     fig, axes = plt.subplots(2, 2)
     axes[0][0].imshow(rgb)
@@ -143,4 +146,4 @@ def visualize():
 
 
 if __name__ == '__main__':
-    visualize()
+    visualize_disparity()

@@ -6,32 +6,7 @@ import matplotlib.pyplot as plt
 import os
 import pprint
 from util.transform import Compose
-from custom.label import color2label, color2label_scene02
-
-
-def rgb2label(img, label_dict):
-    """
-
-    Args:
-        label_dict:
-        img: CvImage in rgb order
-
-    Returns:
-        label: (H, W)
-    """
-    assert len(img.shape) == 3
-    height, width, ch = img.shape
-    assert ch == 3
-
-    W = np.power(256, [[0], [1], [2]])
-    img_id = img.dot(W).squeeze(-1)
-    values = np.unique(img_id)
-
-    label = np.zeros(img_id.shape)
-
-    for i, c in enumerate(values):
-        label[img_id == c] = label_dict[tuple(img[img_id == c][0])].trainId
-    return label
+from custom.label import color2label, color2label_scene02, rgb2label
 
 
 def transform(random=False):
@@ -47,7 +22,7 @@ def transform(random=False):
     assert len(paths) == 42520
     for path in tqdm(paths):
         color = cv2.imread(path)[:, :, ::-1]
-        label = rgb2label(color, label_dict).astype('uint8')
+        label = rgb2label(color, label_dict)
         cv2.imwrite(path.replace('classgt', 'label'), label)
 
 
