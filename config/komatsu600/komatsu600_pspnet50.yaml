@@ -34,7 +34,7 @@ TRAIN:
   weight:  # path to initial weight (default: none)
   resume:  # path to latest checkpoint (default: none)
   evaluate: False  # evaluate on validation set, extra gpu memory needed and small batch_size_val is recommend
-  is_depth: True
+  is_depth: False
   use_focal_loss: False
 Distributed:
   dist_url: tcp://127.0.0.1:6789
