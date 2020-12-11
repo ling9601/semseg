@@ -21,8 +21,8 @@ TRAIN:
   workers: 16  # data loader workers
   batch_size: 16  # batch size for training
   batch_size_val: 8  # batch size for validation during training, memory and speed tradeoff
-  base_lr: 0.01
-  epochs: 120
+  base_lr: 0.001
+  epochs: 100
   start_epoch: 0
   power: 0.9
   momentum: 0.9
@@ -35,7 +35,7 @@ TRAIN:
   resume:  # path to latest checkpoint (default: none)
   evaluate: False  # evaluate on validation set, extra gpu memory needed and small batch_size_val is recommend
   is_depth: False
-  use_focal_loss: False
+  use_focal_loss: True
 Distributed:
   dist_url: tcp://127.0.0.1:6789
   dist_backend: 'nccl'
@@ -54,7 +54,7 @@ TEST:
   index_start: 0  # evaluation start index in list
   index_step: 0  # evaluation step index in list, 0 means to end
   test_gpu: [0,1]
-  model_path: exp/kitti2/pspnet50/model/train_epoch_120.pth  # evaluation model path
-  save_folder: exp/kitti2/pspnet50/result/epoch_120/val/ss  # results save folder
+  model_path: exp/kitti2/pspnet50/model/train_epoch_100.pth  # evaluation model path
+  save_folder: exp/kitti2/pspnet50/result/epoch_100/val/ss  # results save folder
   colors_path: data/kitti2/kitti2_colors.txt  # path of dataset colors
   names_path: data/kitti2/kitti2_names.txt  # path of dataset category names

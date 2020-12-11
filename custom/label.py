@@ -84,3 +84,5 @@ color2label_komatsu600 = {
     (34, 139, 34): Label('Foliage', 9),
     (240, 230, 140): Label('Rock', 10)
 }
+
+color2label_komatsu600_mixed = color2label_komatsu600

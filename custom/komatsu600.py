@@ -19,8 +19,8 @@ def transform():
     """
     if not os.path.exists(label_dir):
         os.mkdir(label_dir)
-    label_paths = glob.glob(os.path.join(segmentation_dir, '*'))
-    for path in tqdm(label_paths):
+    segmentation_paths = glob.glob(os.path.join(segmentation_dir, '*'))
+    for path in tqdm(segmentation_paths):
         label = cv2.imread(path)[:, :, ::-1]
         new_label = rgb2label(label, color2label_komatsu600)
         cv2.imwrite(os.path.join(label_dir, os.path.basename(path)), new_label)
