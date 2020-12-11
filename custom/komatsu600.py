@@ -4,31 +4,33 @@ from tqdm import tqdm
 import cv2
 import numpy as np
 from custom.label import color2label_komatsu600, rgb2label
+from custom.visualize import visualize_class_distribution, visualize_comparison
 
 dataset_dir = 'dataset/komatsu600'
+segmentation_dir = os.path.join(dataset_dir, 'segmentation')
+label_dir = os.path.join(dataset_dir, 'label')
+list_dir = os.path.join(dataset_dir, 'list')
+list_depth_dir = os.path.join(dataset_dir, 'list-depth')
 
 
 def transform():
     """
     transform rgb-segmentation label to train-id label
     """
-    out_dir = os.path.join(dataset_dir, 'label')
-    if not os.path.exists(out_dir):
-        os.mkdir(out_dir)
-    label_dir = os.path.join(dataset_dir, 'segmentation')
-    label_paths = glob.glob(os.path.join(label_dir, '*'))
+    if not os.path.exists(label_dir):
+        os.mkdir(label_dir)
+    label_paths = glob.glob(os.path.join(segmentation_dir, '*'))
     for path in tqdm(label_paths):
         label = cv2.imread(path)[:, :, ::-1]
         new_label = rgb2label(label, color2label_komatsu600)
-        cv2.imwrite(os.path.join(out_dir, os.path.basename(path)), new_label)
+        cv2.imwrite(os.path.join(label_dir, os.path.basename(path)), new_label)
 
 
 def makeList_depth_random(train_rate=0.8):
-    out_dir = os.path.join(dataset_dir, 'list-depth')
-    if not os.path.exists(out_dir):
-        os.mkdir(out_dir)
-    train_list_path = os.path.join(out_dir, 'train.txt')
-    val_list_path = os.path.join(out_dir, 'val.txt')
+    if not os.path.exists(list_depth_dir):
+        os.mkdir(list_depth_dir)
+    train_list_path = os.path.join(list_depth_dir, 'train.txt')
+    val_list_path = os.path.join(list_depth_dir, 'val.txt')
     depth_paths = sorted(glob.glob(os.path.join(dataset_dir, 'normalized_3C_depth', '*')))
     rgb_paths = sorted(glob.glob(os.path.join(dataset_dir, 'rgb', '*')))
     label_paths = sorted(glob.glob(os.path.join(dataset_dir, 'label', '*')))
@@ -57,11 +59,10 @@ def makeList_depth_random(train_rate=0.8):
 
 
 def makeList_random(train_rate=0.8):
-    out_dir = os.path.join(dataset_dir, 'list')
-    if not os.path.exists(out_dir):
-        os.mkdir(out_dir)
-    train_list_path = os.path.join(out_dir, 'train.txt')
-    val_list_path = os.path.join(out_dir, 'val.txt')
+    if not os.path.exists(list_dir):
+        os.mkdir(list_dir)
+    train_list_path = os.path.join(list_dir, 'train.txt')
+    val_list_path = os.path.join(list_dir, 'val.txt')
     rgb_paths = sorted(glob.glob(os.path.join(dataset_dir, 'rgb', '*')))
     label_paths = sorted(glob.glob(os.path.join(dataset_dir, 'label', '*')))
     # remove dataset_dir
@@ -100,5 +101,32 @@ def normalize_depth():
         cv2.imwrite(new_path, normalized_3C_depth)
 
 
+def get_label_paths(split):
+    assert split in ['all', 'val', 'train']
+    if split == 'all':
+        return sorted(glob.glob(os.path.join(label_dir, '*')))
+    else:
+        lines = open(os.path.join(list_dir, f'{split}.txt'), 'r').readlines()
+        paths = list(map(lambda line: os.path.join(dataset_dir, line.split(' ')[-1].strip()), lines))
+        return sorted(paths)
+
+
 if __name__ == '__main__':
-    makeList_random()
+    class_names = list(map(lambda n: n.strip(), open('data/komatsu600/komatsu600_names.txt', 'r').readlines()))
+
+    # # Generate list file
+    # makeList_random()
+
+    # # visualize class distribution
+    # visualize_class_distribution(get_label_paths('all'), class_names, 'All')
+    # visualize_class_distribution(get_label_paths('val'), class_names, 'Test')
+    # visualize_class_distribution(get_label_paths('train'), class_names, 'Train')
+
+    # # Show comparison between true segmentation and predicted segmentation
+    # label_paths = get_label_paths('val')
+    # rgb_paths = list(map(lambda path: path.replace('label', 'rgb'), label_paths))
+    # depth_paths = list(map(lambda path: path.replace('label', 'normalized_3C_depth'), label_paths))
+    # true_seg_paths = list(map(lambda path: path.replace('label', 'segmentation'), label_paths))
+    # pred_seg_dir = 'exp/komatsu600/attention_v1_fusepspnet50/result/epoch_100/val/ss/color'
+    # pred_seg_paths = list(map(lambda path: os.path.join(pred_seg_dir, os.path.basename(path)), label_paths))
+    # visualize_comparison(rgb_paths, depth_paths, true_seg_paths, pred_seg_paths)

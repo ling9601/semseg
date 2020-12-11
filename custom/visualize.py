@@ -5,145 +5,77 @@ from imageio import imread, imwrite
 import numpy as np
 from collections import OrderedDict
 import time
-
-dataset_path = 'dataset/cityscapes'
-
-
-class Point:
-    def __init__(self, cord):
-        self.x, self.y = cord
-        self.pl = []
-        self.dl = []
-
-    def __repr__(self):
-        return '({}, {})'.format(self.x, self.y)
-
-    def __key(self):
-        return self.x, self.y
-
-    def __hash__(self):
-        return hash(self.__key())
-
-    def __eq__(self, other):
-        if isinstance(other, Point):
-            return self.__key() == other.__key()
-        return NotImplemented
-
-    def add_surrounding_point(self, point):
-        self.pl.append(point)
-
-    def add_depth(self, value):
-        self.dl.append(value)
-
-    @property
-    def depth_num(self):
-        return len(self.dl)
+import cv2
+from tqdm import tqdm
 
 
-def get_point(point_dict, cord):
-    if cord in point_dict:
-        p = point_dict[cord]
-    else:
-        p = Point(cord)
-        point_dict[cord] = p
-    return p
+def visualize_class_distribution(label_paths, class_names, title=''):
+    """
+    Show class distribution
+    @param label_paths: list of single channel label image file path
+    @type label_paths: list
+    @param class_names: list of class name
+    @type class_names: list
+    @param title: result image title, plt.title()
+    @type title: str
+    """
 
+    def autolabel(rects):
+        """
+        Attach a text label above each bar displaying its height
+        """
+        for rect in rects:
+            height = rect.get_height()
+            ax.text(rect.get_x() + rect.get_width() / 2., 1.01 * height,
+                    '{:.2f}%'.format(height * 100),
+                    ha='center', va='bottom')
 
-def fill(depth):
-    point_dict = {}
-    h, w = depth.shape
-    for y in range(h):
-        for x in range(w):
-            if depth[y, x] == np.inf:
-                p = get_point(point_dict, (x, y))
-                for dy in [-1, 0, 1]:
-                    for dx in [-1, 0, 1]:
-                        if dx == 0 and dy == 0:
-                            continue
-                        nx = x + dx
-                        ny = y + dy
-                        if nx < 0 or ny < 0 or nx >= w or ny >= h:
-                            continue
-                        if depth[ny, nx] == np.inf:
-                            sp = get_point(point_dict, (nx, ny))
-                            p.add_surrounding_point(sp)
-                        else:
-                            p.add_depth(depth[ny, nx])
-    sorted_dict = OrderedDict(sorted(point_dict.items(), key=lambda i: i[1].depth_num))
-    while sorted_dict:
-        (x, y), point = sorted_dict.popitem()
-        max_num = point.depth_num
-        try:
-            value = sum(point.dl) / len(point.dl)
-        except Exception:
-            breakpoint()
-        depth[y, x] = value
-        for p in point.pl:
-            if (p.x, p.y) not in sorted_dict:
-                continue
-            p.add_depth(value)
-            # move to the front
-            if p.depth_num > max_num or p.depth_num == 1:
-                sorted_dict[(p.x, p.y)] = sorted_dict.pop((p.x, p.y))
-
-    return depth
-
-
-def DisparityToDepth(disp):
-    disp[disp > 0] = (disp[disp > 0] - 1) / 256
-    disp = (0.209313 * 2262.52) / disp
-    return disp
-
-
-def visualize_disparity():
-    disparity_path = sorted(glob.glob(os.path.join(dataset_path, 'disparity', '*', '*', '*disparity.png')))
-    rgb_path = sorted(glob.glob(os.path.join(dataset_path, 'leftImg8bit', '*', '*', '*leftImg8bit.png')))
-    rgb = imread(rgb_path[0])
-    disp = imread(disparity_path[0]).astype(np.float32)
-    st = time.time()
-    depth = DisparityToDepth(disp.copy())
-    new_depth = fill(depth.copy())
-    print(time.time() - st)
-
-    fig, axes = plt.subplots(2, 2)
-    axes[0][0].imshow(rgb)
-    axes[0][1].imshow(disp)
-    axes[1][0].imshow(depth)
-    axes[1][1].imshow(new_depth)
+    count_sum = np.zeros((len(class_names, )))
+    class_num = len(class_names)
+    for path in tqdm(label_paths):
+        label = cv2.imread(path, cv2.IMREAD_UNCHANGED)
+        counts, bins = np.histogram(label, bins=np.arange(class_num + 1))
+        count_sum += counts
+    prob = count_sum / sum(count_sum)
+    fig, ax = plt.subplots()
+    width = 0.75
+    ind = np.arange(class_num)
+    rect = ax.bar(class_names, prob, width, color='blue')
+    ax.set_xticks(ind)
+    autolabel(rect)
+    plt.title(title)
+    plt.ylabel('Percentage')
+    plt.xlabel('Class')
     plt.show()
 
 
-def visualize_list():
-    data_root = '../dataset/cityscapes'
-    list_read = open(os.path.join(data_root, 'list/fine_train.txt')).readlines()
-    assert list_read is not None
-    line = list_read[0].strip()
-    line_split = line.split(' ')
-    print(line_split)
-    image_name = os.path.join(data_root, line_split[0])
-    label_name = os.path.join(data_root, line_split[1])
-    fig, axes = plt.subplots(1, 2)
-    axes[0].imshow(imread(image_name))
-    axes[1].imshow(imread(label_name))
-    plt.show()
-
-
-def visualize():
-    rgb_path = sorted(glob.glob(os.path.join(dataset_path, 'leftImg8bit', 'train', '*', '*leftImg8bit.png')))
-    color_path = sorted(glob.glob(os.path.join(dataset_path, 'gtFine', 'train', '*', '*gtFine_color.png')))
-    label_path = sorted(glob.glob(os.path.join(dataset_path, 'gtFine', 'train', '*', '*labelIds.png')))
-    trainlabel_path = sorted(glob.glob(os.path.join(dataset_path, 'gtFine', 'train', '*', '*labelTrainIds.png')))
-    rgb = rgb_path[0]
-    color = color_path[0]
-    label = label_path[0]
-    trainlabel = trainlabel_path[0]
-    fig, axes = plt.subplots(2, 2)
-    axes[0][0].imshow(imread(rgb))
-    axes[0][1].imshow(imread(color))
-    axes[1][0].imshow(imread(label))
-    axes[1][1].imshow(imread(trainlabel))
-    plt.show()
-
-
-if __name__ == '__main__':
-    visualize_disparity()
+def visualize_comparison(rgb_paths, depth_paths, true_seg_paths, pred_seg_paths):
+    """
+    Show rgb image, true segmentation image, predicted segmentation image at the same time for len(rgb_paths) times
+    @param rgb_paths: list of real image file paths
+    @type rgb_paths: list
+    @param depth_paths: list of single-channel depth image paths
+    @type depth_paths: list
+    @param true_seg_paths: list of true segmentation image paths
+    @type true_seg_paths: list
+    @param pred_seg_paths: list of predicted segmentation image paths
+    @type pred_seg_paths: list
+    """
+    for rgb_path, depth_path, true_seg_path, pred_seg_path in zip(rgb_paths, depth_paths, true_seg_paths,
+                                                                  pred_seg_paths):
+        rgb = cv2.imread(rgb_path)
+        depth = cv2.imread(depth_path, cv2.IMREAD_GRAYSCALE)
+        true_seg = cv2.imread(true_seg_path)
+        pred_seg = cv2.imread(pred_seg_path)
+        fig = plt.figure()
+        fig.add_subplot(221).title.set_text('rgb')
+        plt.imshow(rgb)
+        fig.add_subplot(222).title.set_text('depth')
+        plt.imshow(depth)
+        fig.add_subplot(223).title.set_text('True')
+        plt.imshow(true_seg)
+        fig.add_subplot(224).title.set_text('Predicted')
+        plt.imshow(pred_seg)
+        fig.suptitle(os.path.basename(rgb_path))
+        plt.show()
+       
