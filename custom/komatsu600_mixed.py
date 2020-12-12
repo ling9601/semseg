@@ -56,9 +56,9 @@ def makeList_depth_random(train_rate=0.8):
         with open(os.path.join(list_depth_dir, f'{split}.txt'), 'w') as f:
             for basename in basenames[:train_num]:
                 for v in variation:
-                    rgb_path = os.path.join(dataset_dir, 'rgb', v, basename)
-                    depth_path = os.path.join(dataset_dir, 'normalized_3C_depth', v, basename)
-                    label_path = os.path.join(dataset_dir, 'label', v, basename)
+                    rgb_path = os.path.join('rgb', v, basename)
+                    depth_path = os.path.join('normalized_3C_depth', v, basename)
+                    label_path = os.path.join('label', v, basename)
                     f.write(' '.join([rgb_path, depth_path, label_path]) + '\n')
 
     if not os.path.exists(list_depth_dir):
