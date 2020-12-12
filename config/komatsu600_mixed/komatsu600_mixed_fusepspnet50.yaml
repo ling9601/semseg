@@ -5,7 +5,7 @@ DATA:
   classes: 11
 
 TRAIN:
-  arch: fusedPsp
+  arch: fusePsp
   layers: 50
   sync_bn: True  # adopt syncbn or not
   train_h: 321
