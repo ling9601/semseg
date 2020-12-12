@@ -417,6 +417,13 @@ def train(train_loader, model, optimizer, epoch):
         logger.info(
             'Train result at epoch [{}/{}]: mIoU/mAcc/allAcc {:.4f}/{:.4f}/{:.4f}.'.format(epoch + 1, args.epochs, mIoU,
                                                                                            mAcc, allAcc))
+        # log result of each class at the last epoch
+        if epoch + 1 == args.epochs:
+            names = [line.rstrip('\n') for line in open(args.names_path)]
+            for i in range(len(iou_class)):
+                logger.info(
+                    'Class_{} result: iou/accuracy {:.4f}/{:.4f}, name: {} .'.format(i, iou_class[i], accuracy_class[i],
+                                                                                     names[i]))
     return main_loss_meter.avg, mIoU, mAcc, allAcc
 
 
@@ -522,6 +529,13 @@ def train_d(train_loader, model, optimizer, epoch):
         logger.info(
             'Train result at epoch [{}/{}]: mIoU/mAcc/allAcc {:.4f}/{:.4f}/{:.4f}.'.format(epoch + 1, args.epochs, mIoU,
                                                                                            mAcc, allAcc))
+        # log result of each class at the last epoch
+        if epoch + 1 == args.epochs:
+            names = [line.rstrip('\n') for line in open(args.names_path)]
+            for i in range(len(iou_class)):
+                logger.info(
+                    'Class_{} result: iou/accuracy {:.4f}/{:.4f}, name: {} .'.format(i, iou_class[i], accuracy_class[i],
+                                                                                     names[i]))
     return main_loss_meter.avg, aux_loss_meter.avg, aux_d_loss_meter.avg, mIoU, mAcc, allAcc
 
 
