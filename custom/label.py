@@ -10,7 +10,7 @@ class Label:
         return '({}, {})'.format(self.className, self.trainId)
 
 
-def rgb2label(img, label_dict):
+def rgb2label(img, label_dict, default_label=None):
     """
 
     Args:
@@ -31,7 +31,12 @@ def rgb2label(img, label_dict):
     label = np.zeros(img_id.shape)
 
     for i, c in enumerate(values):
-        label[img_id == c] = label_dict[tuple(img[img_id == c][0])].trainId
+        if tuple(img[img_id == c][0]) in label_dict:
+            label[img_id == c] = label_dict[tuple(img[img_id == c][0])].trainId
+        elif default_label is not None:
+            label[img_id == c] = default_label
+        else:
+            raise KeyError('img contain color that not in the label_dict')
     return label.astype('uint8')
 
 
