@@ -4,6 +4,7 @@ from tqdm import tqdm
 import cv2
 import numpy as np
 from custom.label import color2label_komatsu600, rgb2label
+from custom.analyze import print_avg_iou
 from custom.visualize import visualize_class_distribution, visualize_comparison
 
 dataset_dir = 'dataset/komatsu600'
@@ -130,3 +131,7 @@ if __name__ == '__main__':
     # pred_seg_dir = 'exp/komatsu600/attention_v1_fusepspnet50/result/epoch_100/val/ss/color'
     # pred_seg_paths = list(map(lambda path: os.path.join(pred_seg_dir, os.path.basename(path)), label_paths))
     # visualize_comparison(rgb_paths, depth_paths, true_seg_paths, pred_seg_paths)
+
+    # print iou
+    log_paths = sorted(list(glob.glob('exp/komatsu600/pspnet50/result/*.log')))[:-1]
+    print_avg_iou(log_paths)
