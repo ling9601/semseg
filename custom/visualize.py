@@ -65,8 +65,8 @@ def visualize_comparison(rgb_paths, depth_paths, true_seg_paths, pred_seg_paths)
                                                                   pred_seg_paths):
         rgb = cv2.imread(rgb_path)
         depth = cv2.imread(depth_path, cv2.IMREAD_GRAYSCALE)
-        true_seg = cv2.imread(true_seg_path)
-        pred_seg = cv2.imread(pred_seg_path)
+        true_seg = cv2.imread(true_seg_path)[:, :, ::-1]
+        pred_seg = cv2.imread(pred_seg_path)[:, :, ::-1]
         fig = plt.figure()
         fig.add_subplot(221).title.set_text('rgb')
         plt.imshow(rgb)
@@ -78,4 +78,3 @@ def visualize_comparison(rgb_paths, depth_paths, true_seg_paths, pred_seg_paths)
         plt.imshow(pred_seg)
         fig.suptitle(os.path.basename(rgb_path))
         plt.show()
-       
