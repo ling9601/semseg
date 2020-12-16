@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 from custom.label import color2label_komatsu600, rgb2label
 import imageio
-from custom.tools import my_dilation
+from custom.tools import my_dilation, transform
 from custom.analyze import print_avg_iou
 from custom.visualize import visualize_class_distribution, visualize_comparison
 
@@ -14,23 +14,6 @@ segmentation_dir = os.path.join(dataset_dir, 'segmentation')
 label_dir = os.path.join(dataset_dir, 'label')
 list_dir = os.path.join(dataset_dir, 'list')
 list_depth_dir = os.path.join(dataset_dir, 'list-depth')
-
-
-def transform(label_folder_name, segmentation_folder_name):
-    """
-    transform rgb-segmentation label to train-id label
-    """
-    label_dir = os.path.join(dataset_dir, label_folder_name)
-    segmentation_dir = os.path.join(dataset_dir, segmentation_folder_name)
-    if not os.path.exists(label_dir):
-        os.mkdir(label_dir)
-    if not os.path.exists(segmentation_dir):
-        os.mkdir(segmentation_dir)
-    segmentation_paths = glob.glob(os.path.join(segmentation_dir, '*'))
-    for path in tqdm(segmentation_paths):
-        label = cv2.imread(path)[:, :, ::-1]
-        new_label = rgb2label(label, color2label_komatsu600)
-        cv2.imwrite(os.path.join(label_dir, os.path.basename(path)), new_label)
 
 
 def makeList_depth_random(train_rate=0.8):
@@ -127,14 +110,14 @@ def create_dilated_segmentation():
     segmentation_paths = glob.glob(os.path.join(segmentation_dir, '*'))
     for path in tqdm(segmentation_paths):
         seg = imageio.imread(path)
-        dilated_seg = my_dilation(seg, color)
+        dilated_seg = my_dilation(seg, color, (3, 3))
         imageio.imwrite(os.path.join(dilated_segmentation_dir, os.path.basename(path)), dilated_seg)
 
 
 if __name__ == '__main__':
     class_names = list(map(lambda n: n.strip(), open('data/komatsu600/komatsu600_names.txt', 'r').readlines()))
 
-    # transform('label', 'segmentation')
+    # transform(label_dir, segmentation_dir, color2label_komatsu600)
     # # Generate list file
     # makeList_random()
 
@@ -143,14 +126,14 @@ if __name__ == '__main__':
     # visualize_class_distribution(get_label_paths('val'), class_names, 'Test')
     # visualize_class_distribution(get_label_paths('train'), class_names, 'Train')
 
-    # # Show comparison between true segmentation and predicted segmentation
-    # label_paths = get_label_paths('val')
-    # rgb_paths = list(map(lambda path: path.replace('label', 'rgb'), label_paths))
-    # depth_paths = list(map(lambda path: path.replace('label', 'normalized_3C_depth'), label_paths))
-    # true_seg_paths = list(map(lambda path: path.replace('label', 'segmentation'), label_paths))
-    # pred_seg_dir = 'exp/komatsu600/attention_v1_fusepspnet50/result/epoch_100/val/ss/color'
-    # pred_seg_paths = list(map(lambda path: os.path.join(pred_seg_dir, os.path.basename(path)), label_paths))
-    # visualize_comparison(rgb_paths, depth_paths, true_seg_paths, pred_seg_paths)
+    # Show comparison between true segmentation and predicted segmentation
+    label_paths = get_label_paths('val')
+    rgb_paths = list(map(lambda path: path.replace('label', 'rgb'), label_paths))
+    depth_paths = list(map(lambda path: path.replace('label', 'normalized_3C_depth'), label_paths))
+    true_seg_paths = list(map(lambda path: path.replace('label', 'segmentation'), label_paths))
+    pred_seg_dir = 'exp/komatsu600_dilated/pspnet50/result/epoch_200/val/ss/color'
+    pred_seg_paths = list(map(lambda path: os.path.join(pred_seg_dir, os.path.basename(path)), label_paths))
+    visualize_comparison(rgb_paths, depth_paths, true_seg_paths, pred_seg_paths)
 
     # # print iou of pspnet50 (5 run, 100epoch)
     # log_paths = sorted(list(glob.glob('exp/komatsu600/pspnet50/result/*.log')))[:-1]
@@ -160,16 +143,16 @@ if __name__ == '__main__':
     # log_paths = sorted(list(glob.glob('exp/komatsu600/fusepspnet50/result/*.log')))
     # print_avg_iou(log_paths)
 
-    # # create dilated segmentation
+    # create dilated segmentation
     # create_dilated_segmentation()
-    # # transfer dialted segmentation
-    # transform('dilated_label', 'dilated_segmentation')
-    # create list
-    list_dir = os.path.join(dataset_dir, 'dilated_list')
-    if not os.path.exists(list_dir):
-        os.mkdir(list_dir)
-    lines_train = open(os.path.join(dataset_dir, 'list', 'train.txt'), 'r').readlines()
-    lines_train = [line.replace('label', 'dilated_label') for line in lines_train]
-    lines_val = open(os.path.join(dataset_dir, 'list', 'val.txt'), 'r').readlines()
-    open(os.path.join(list_dir, 'train.txt'), 'w').writelines(lines_train)
-    open(os.path.join(list_dir, 'val.txt'), 'w').writelines(lines_val)
+    # transfer dialted segmentation
+    # transform(os.path.join(dataset_dir, 'dilated_label'), os.path.join(dataset_dir, 'dilated_segmentation'), color2label_komatsu600)
+    # # create list
+    # list_dir = os.path.join(dataset_dir, 'dilated_list')
+    # if not os.path.exists(list_dir):
+    #     os.mkdir(list_dir)
+    # lines_train = open(os.path.join(dataset_dir, 'list', 'train.txt'), 'r').readlines()
+    # lines_train = [line.replace('label', 'dilated_label') for line in lines_train]
+    # lines_val = open(os.path.join(dataset_dir, 'list', 'val.txt'), 'r').readlines()
+    # open(os.path.join(list_dir, 'train.txt'), 'w').writelines(lines_train)
+    # open(os.path.join(list_dir, 'val.txt'), 'w').writelines(lines_val)

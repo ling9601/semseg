@@ -1,4 +1,5 @@
 import numpy as np
+import copy
 
 
 class Label:
@@ -91,3 +92,6 @@ color2label_komatsu600 = {
 }
 
 color2label_komatsu600_mixed = color2label_komatsu600
+
+color2label_komatsu_real = copy.deepcopy(color2label_komatsu600_mixed)
+color2label_komatsu_real.update({(0, 0, 0): Label('blank', 255)})

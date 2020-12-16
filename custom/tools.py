@@ -1,7 +1,9 @@
 import cv2
 import matplotlib.pyplot as plt
-import imageio
+import glob
+import os
 import numpy as np
+from tqdm import tqdm
 from custom.label import rgb2label, Label, color2label_komatsu600
 
 
@@ -42,3 +44,16 @@ def my_dilation(img, color, kernel_size=(5, 5), show=False):
         plt.imshow(new_img)
         plt.show()
     return new_img
+
+
+def transform(label_dir, seg_dir, label_dict):
+    """
+    transform rgb-segmentation label to train-id label
+    """
+    if not os.path.exists(label_dir):
+        os.mkdir(label_dir)
+    seg_paths = glob.glob(os.path.join(seg_dir, '*'))
+    for path in tqdm(seg_paths):
+        label = cv2.imread(path)[:, :, ::-1]
+        new_label = rgb2label(label, label_dict)
+        cv2.imwrite(os.path.join(label_dir, os.path.basename(path)), new_label)
