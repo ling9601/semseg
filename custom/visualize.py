@@ -1,7 +1,7 @@
 import os
 import glob
 import matplotlib.pyplot as plt
-from imageio import imread, imwrite
+import imageio
 import numpy as np
 from collections import OrderedDict
 import time
@@ -49,32 +49,42 @@ def visualize_class_distribution(label_paths, class_names, title=''):
     plt.show()
 
 
-def visualize_comparison(rgb_paths, depth_paths, true_seg_paths, pred_seg_paths):
+def img_overlay(overlay, output, alpha=0.5):
+    return cv2.addWeighted(overlay, output, img2, 1 - alpha)
+
+
+def visualize_comparison(rgb_paths, depth_paths, segmentation_list, overlay=False, alpha=0.5):
     """
     Show rgb image, true segmentation image, predicted segmentation image at the same time for len(rgb_paths) times
+
     @param rgb_paths: list of real image file paths
     @type rgb_paths: list
     @param depth_paths: list of single-channel depth image paths
     @type depth_paths: list
-    @param true_seg_paths: list of true segmentation image paths
-    @type true_seg_paths: list
-    @param pred_seg_paths: list of predicted segmentation image paths
-    @type pred_seg_paths: list
+    @param segmentation_list: list of ('title', paths)
+    @type segmentation_list:  list
+    @param overlay:
+    @type overlay: bool
+    @param alpha: alpha value for overlay
+    @type alpha: float
     """
-    for rgb_path, depth_path, true_seg_path, pred_seg_path in zip(rgb_paths, depth_paths, true_seg_paths,
-                                                                  pred_seg_paths):
-        rgb = cv2.imread(rgb_path)
-        depth = cv2.imread(depth_path, cv2.IMREAD_GRAYSCALE)
-        true_seg = cv2.imread(true_seg_path)[:, :, ::-1]
-        pred_seg = cv2.imread(pred_seg_path)[:, :, ::-1]
+    assert len(segmentation_list) <= 4
+    for idx_path in range(len(rgb_paths)):
+        rgb_img = cv2.imread(rgb_paths[idx_path])
+        depth_img = cv2.imread(depth_paths[idx_path])
         fig = plt.figure()
         fig.add_subplot(221).title.set_text('rgb')
-        plt.imshow(rgb)
-        fig.add_subplot(222).title.set_text('depth')
-        plt.imshow(depth)
-        fig.add_subplot(223).title.set_text('True')
-        plt.imshow(true_seg)
-        fig.add_subplot(224).title.set_text('Predicted')
-        plt.imshow(pred_seg)
-        fig.suptitle(os.path.basename(rgb_path))
+        plt.axis('off')
+        plt.imshow(rgb_img[:, :, ::-1])
+        # fig.add_subplot(222).title.set_text('depth')
+        # plt.axis('off')
+        # plt.imshow(depth_img[:, :, ::-1])
+        for idx_seg, seg in enumerate(segmentation_list):
+            seg_img = cv2.imread(seg[1][idx_path])
+            if overlay:
+                seg_img = cv2.addWeighted(seg_img, alpha, rgb_img, 1 - alpha, 0)
+            fig.add_subplot(2, 2, 2 + idx_seg).title.set_text(seg[0])
+            plt.axis('off')
+            plt.imshow(seg_img[:, :, ::-1])
+        fig.suptitle(os.path.basename(rgb_paths[idx_path]))
         plt.show()

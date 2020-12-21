@@ -131,9 +131,15 @@ if __name__ == '__main__':
     rgb_paths = list(map(lambda path: path.replace('label', 'rgb'), label_paths))
     depth_paths = list(map(lambda path: path.replace('label', 'normalized_3C_depth'), label_paths))
     true_seg_paths = list(map(lambda path: path.replace('label', 'segmentation'), label_paths))
-    pred_seg_dir = 'exp/komatsu600_dilated/pspnet50/result/epoch_200/val/ss/color'
-    pred_seg_paths = list(map(lambda path: os.path.join(pred_seg_dir, os.path.basename(path)), label_paths))
-    visualize_comparison(rgb_paths, depth_paths, true_seg_paths, pred_seg_paths)
+    # fusepspnet50_seg_dir = 'exp/komatsu600/fusepspnet50/result/epoch_100/val/ss/color'
+    # fusepspnet50_seg_paths = list(map(lambda path: os.path.join(fusepspnet50_seg_dir, os.path.basename(path)), label_paths))
+    pspnet50_seg_dir = 'exp/komatsu600/pspnet50/result/epoch_200/val/ss/color'
+    pspnet50_seg_paths = list(map(lambda path: os.path.join(pspnet50_seg_dir, os.path.basename(path)), label_paths))
+    dilated_seg_dir = 'exp/komatsu600_dilated/pspnet50/result/epoch_200/val/ss/color'
+    dilated_seg_paths = list(map(lambda path: os.path.join(dilated_seg_dir, os.path.basename(path)), label_paths))
+    visualize_comparison(rgb_paths, depth_paths,
+                         [('true', true_seg_paths), ('no dilation', pspnet50_seg_paths), ('dilation', dilated_seg_paths)],
+                         overlay=True)
 
     # # print iou of pspnet50 (5 run, 100epoch)
     # log_paths = sorted(list(glob.glob('exp/komatsu600/pspnet50/result/*.log')))[:-1]
@@ -156,3 +162,14 @@ if __name__ == '__main__':
     # lines_val = open(os.path.join(dataset_dir, 'list', 'val.txt'), 'r').readlines()
     # open(os.path.join(list_dir, 'train.txt'), 'w').writelines(lines_train)
     # open(os.path.join(list_dir, 'val.txt'), 'w').writelines(lines_val)
+
+    #
+    # color = (34, 139, 34)
+    # dilated_segmentation_dir = os.path.join(dataset_dir, 'dilated_segmentation')
+    # if not os.path.exists(dilated_segmentation_dir):
+    #     os.mkdir(dilated_segmentation_dir)
+    # segmentation_paths = glob.glob(os.path.join(segmentation_dir, '*'))
+    # segmentation_paths.sort()
+    # for path in tqdm(segmentation_paths):
+    #     seg = imageio.imread(path)
+    #     dilated_seg = my_dilation(seg, color, (3, 3), show=True)

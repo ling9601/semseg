@@ -75,3 +75,7 @@ slurm*
 initmodel
 
 .idea/
+
+test_result/
+log_result/
+test.py

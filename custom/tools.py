@@ -36,12 +36,16 @@ def my_dilation(img, color, kernel_size=(5, 5), show=False):
         fig = plt.figure()
         fig.add_subplot(221).title.set_text('_ori')
         plt.imshow(out)
+        plt.axis('off')
         fig.add_subplot(222).title.set_text('_after')
         plt.imshow(out_dilated)
+        plt.axis('off')
         fig.add_subplot(223).title.set_text('ori')
         plt.imshow(img)
+        plt.axis('off')
         fig.add_subplot(224).title.set_text('after')
         plt.imshow(new_img)
+        plt.axis('off')
         plt.show()
     return new_img
 
