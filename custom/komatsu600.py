@@ -8,6 +8,7 @@ import imageio
 from custom.tools import my_dilation, transform
 from custom.analyze import print_avg_iou
 from custom.visualize import visualize_class_distribution, visualize_comparison
+import matplotlib.pyplot as plt
 
 dataset_dir = 'dataset/komatsu600'
 segmentation_dir = os.path.join(dataset_dir, 'segmentation')
@@ -101,18 +102,28 @@ def get_label_paths(split):
         return sorted(paths)
 
 
-def create_dilated_segmentation():
+def create_dilated_segmentation(color_list, folder_name):
     # class foliage
-    color = (34, 139, 34)
-    dilated_segmentation_dir = os.path.join(dataset_dir, 'dilated_segmentation')
+    dilated_segmentation_dir = os.path.join(dataset_dir, folder_name)
     if not os.path.exists(dilated_segmentation_dir):
         os.mkdir(dilated_segmentation_dir)
-    segmentation_paths = glob.glob(os.path.join(segmentation_dir, '*'))
+    segmentation_paths = sorted(glob.glob(os.path.join(segmentation_dir, '*')))
+    # debug
+    # segmentation_paths = [path for path in segmentation_paths if any([num in path for num in ['0272.png', '0302.png', '0368.png', '0388.png']])]
     for path in tqdm(segmentation_paths):
         seg = imageio.imread(path)
-        dilated_seg = my_dilation(seg, color, (3, 3))
+        dilated_seg = seg
+        for color in color_list:
+            dilated_seg = my_dilation(dilated_seg, color, (3, 3), show=False)
+        # debug
+        # fig = plt.figure()
+        # fig.add_subplot(121).title.set_text('ori')
+        # plt.imshow(seg)
+        # fig.add_subplot(122).title.set_text('dilated')
+        # plt.imshow(dilated_seg)
+        # fig.suptitle(os.path.basename(path))
+        # plt.show()
         imageio.imwrite(os.path.join(dilated_segmentation_dir, os.path.basename(path)), dilated_seg)
-
 
 if __name__ == '__main__':
     class_names = list(map(lambda n: n.strip(), open('data/komatsu600/komatsu600_names.txt', 'r').readlines()))
@@ -126,20 +137,20 @@ if __name__ == '__main__':
     # visualize_class_distribution(get_label_paths('val'), class_names, 'Test')
     # visualize_class_distribution(get_label_paths('train'), class_names, 'Train')
 
-    # Show comparison between true segmentation and predicted segmentation
-    label_paths = get_label_paths('val')
-    rgb_paths = list(map(lambda path: path.replace('label', 'rgb'), label_paths))
-    depth_paths = list(map(lambda path: path.replace('label', 'normalized_3C_depth'), label_paths))
-    true_seg_paths = list(map(lambda path: path.replace('label', 'segmentation'), label_paths))
-    # fusepspnet50_seg_dir = 'exp/komatsu600/fusepspnet50/result/epoch_100/val/ss/color'
-    # fusepspnet50_seg_paths = list(map(lambda path: os.path.join(fusepspnet50_seg_dir, os.path.basename(path)), label_paths))
-    pspnet50_seg_dir = 'exp/komatsu600/pspnet50/result/epoch_200/val/ss/color'
-    pspnet50_seg_paths = list(map(lambda path: os.path.join(pspnet50_seg_dir, os.path.basename(path)), label_paths))
-    dilated_seg_dir = 'exp/komatsu600_dilated/pspnet50/result/epoch_200/val/ss/color'
-    dilated_seg_paths = list(map(lambda path: os.path.join(dilated_seg_dir, os.path.basename(path)), label_paths))
-    visualize_comparison(rgb_paths, depth_paths,
-                         [('true', true_seg_paths), ('no dilation', pspnet50_seg_paths), ('dilation', dilated_seg_paths)],
-                         overlay=True)
+    # # Show comparison between true segmentation and predicted segmentation
+    # label_paths = get_label_paths('val')
+    # rgb_paths = list(map(lambda path: path.replace('label', 'rgb'), label_paths))
+    # depth_paths = list(map(lambda path: path.replace('label', 'normalized_3C_depth'), label_paths))
+    # true_seg_paths = list(map(lambda path: path.replace('label', 'segmentation'), label_paths))
+    # # fusepspnet50_seg_dir = 'exp/komatsu600/fusepspnet50/result/epoch_100/val/ss/color'
+    # # fusepspnet50_seg_paths = list(map(lambda path: os.path.join(fusepspnet50_seg_dir, os.path.basename(path)), label_paths))
+    # pspnet50_seg_dir = 'exp/komatsu600/pspnet50/result/epoch_200/val/ss/color'
+    # pspnet50_seg_paths = list(map(lambda path: os.path.join(pspnet50_seg_dir, os.path.basename(path)), label_paths))
+    # dilated_seg_dir = 'exp/komatsu600_dilated/pspnet50/result/epoch_200/val/ss/color'
+    # dilated_seg_paths = list(map(lambda path: os.path.join(dilated_seg_dir, os.path.basename(path)), label_paths))
+    # visualize_comparison(rgb_paths, depth_paths,
+    #                      [('true', true_seg_paths), ('no dilation', pspnet50_seg_paths), ('dilation', dilated_seg_paths)],
+    #                      overlay=False)
 
     # # print iou of pspnet50 (5 run, 100epoch)
     # log_paths = sorted(list(glob.glob('exp/komatsu600/pspnet50/result/*.log')))[:-1]
@@ -149,27 +160,33 @@ if __name__ == '__main__':
     # log_paths = sorted(list(glob.glob('exp/komatsu600/fusepspnet50/result/*.log')))
     # print_avg_iou(log_paths)
 
-    # create dilated segmentation
-    # create_dilated_segmentation()
+    ## create dilated segmentation
+    # color_list = [(34, 139, 34)] # foliage
+    # seg_dir_name = 'dilated_segmentation'
+    # label_dir_name = 'dilated_label'
+    # list_dir_name = 'dilated_list'
+    color_list = [(34, 139, 34), (240, 230, 140)]  # foliage, puddle rock
+    seg_dir_name = 'dilated_segmentation_foliage+rock'
+    label_dir_name = 'dilated_label_foliage+rock'
+    list_dir_name = 'dilated_list_foliage+rock'
+    # create_dilated_segmentation(color_list, seg_dir_name)
     # transfer dialted segmentation
-    # transform(os.path.join(dataset_dir, 'dilated_label'), os.path.join(dataset_dir, 'dilated_segmentation'), color2label_komatsu600)
-    # # create list
-    # list_dir = os.path.join(dataset_dir, 'dilated_list')
-    # if not os.path.exists(list_dir):
-    #     os.mkdir(list_dir)
-    # lines_train = open(os.path.join(dataset_dir, 'list', 'train.txt'), 'r').readlines()
-    # lines_train = [line.replace('label', 'dilated_label') for line in lines_train]
-    # lines_val = open(os.path.join(dataset_dir, 'list', 'val.txt'), 'r').readlines()
-    # open(os.path.join(list_dir, 'train.txt'), 'w').writelines(lines_train)
-    # open(os.path.join(list_dir, 'val.txt'), 'w').writelines(lines_val)
+    transform(os.path.join(dataset_dir, label_dir_name), os.path.join(dataset_dir, seg_dir_name), color2label_komatsu600)
+    # create list
+    list_dir = os.path.join(dataset_dir, list_dir_name)
+    if not os.path.exists(list_dir):
+        os.mkdir(list_dir)
+    lines_train = open(os.path.join(dataset_dir, 'list', 'train.txt'), 'r').readlines()
+    lines_train = [line.replace('label', label_dir_name) for line in lines_train]
+    lines_val = open(os.path.join(dataset_dir, 'list', 'val.txt'), 'r').readlines()
+    open(os.path.join(list_dir, 'train.txt'), 'w').writelines(lines_train)
+    open(os.path.join(list_dir, 'val.txt'), 'w').writelines(lines_val)
 
-    #
+    # test dilation/erosion
     # color = (34, 139, 34)
-    # dilated_segmentation_dir = os.path.join(dataset_dir, 'dilated_segmentation')
-    # if not os.path.exists(dilated_segmentation_dir):
-    #     os.mkdir(dilated_segmentation_dir)
     # segmentation_paths = glob.glob(os.path.join(segmentation_dir, '*'))
     # segmentation_paths.sort()
     # for path in tqdm(segmentation_paths):
-    #     seg = imageio.imread(path)
-    #     dilated_seg = my_dilation(seg, color, (3, 3), show=True)
+    #     ori_seg = imageio.imread(path)
+    #     seg_1 = my_dilation(ori_seg, color, (5, 5), show=True)
+
