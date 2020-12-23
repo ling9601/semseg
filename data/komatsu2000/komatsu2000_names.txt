@@ -1,0 +1,11 @@
+road
+roughroad
+berm
+puddle
+others
+sky
+constructionvehicle
+prop
+building
+foliage
+rock

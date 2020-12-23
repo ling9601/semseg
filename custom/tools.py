@@ -61,3 +61,10 @@ def transform(label_dir, seg_dir, label_dict):
         label = cv2.imread(path)[:, :, ::-1]
         new_label = rgb2label(label, label_dict)
         cv2.imwrite(os.path.join(label_dir, os.path.basename(path)), new_label)
+
+
+def normalize_depth(src):
+    assert src.dtype == np.uint16
+    normalized_src = (src / 65535 * 255).astype('uint8')
+    normalized_3C_src = np.stack((normalized_src,) * 3, axis=-1)
+    return normalized_3C_src

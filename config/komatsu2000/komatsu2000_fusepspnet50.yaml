@@ -1,11 +1,11 @@
 DATA:
-  data_root: dataset/komatsu600
-  train_list: dataset/komatsu600/dilated_list/train.txt
-  val_list: dataset/komatsu600/dilated_list/val.txt
+  data_root: dataset/komatsu2000
+  train_list: dataset/komatsu2000/list/train_depth.txt
+  val_list: dataset/komatsu2000/list/val_depth.txt
   classes: 11
 
 TRAIN:
-  arch: psp
+  arch: fusePsp
   layers: 50
   sync_bn: True  # adopt syncbn or not
   train_h: 321
@@ -30,11 +30,11 @@ TRAIN:
   manual_seed:
   print_freq: 10
   save_freq: 1
-  save_path: exp/komatsu600_dilated/pspnet50/model
+  save_path: exp/komatsu2000/fusepspnet50/model
   weight:  # path to initial weight (default: none)
   resume:  # path to latest checkpoint (default: none)
   evaluate: False  # evaluate on validation set, extra gpu memory needed and small batch_size_val is recommend
-  is_depth: False
+  is_depth: True
   use_focal_loss: False
 Distributed:
   dist_url: tcp://127.0.0.1:6789
@@ -44,7 +44,7 @@ Distributed:
   rank: 0
 
 TEST:
-  test_list: dataset/komatsu600/dilated_list/val.txt
+  test_list: dataset/komatsu2000/list/val_depth.txt
   split: val  # split in [train, val and test]
   base_size: 640  # based size for scaling
   test_h: 321
@@ -54,7 +54,7 @@ TEST:
   index_start: 0  # evaluation start index in list
   index_step: 0  # evaluation step index in list, 0 means to end
   test_gpu: [0,1]
-  model_path: exp/komatsu600_dilated/pspnet50/model/train_epoch_200.pth  # evaluation model path
-  save_folder: exp/komatsu600_dilated/pspnet50/result/epoch_200/val/ss  # results save folder
-  colors_path: data/komatsu600/komatsu600_colors.txt  # path of dataset colors
-  names_path: data/komatsu600/komatsu600_names.txt  # path of dataset category names
+  model_path: exp/komatsu2000/fusepspnet50/model/train_epoch_200.pth  # evaluation model path
+  save_folder: exp/komatsu2000/fusepspnet50/result/epoch_200/val/ss  # results save folder
+  colors_path: data/komatsu2000/komatsu2000_colors.txt  # path of dataset colors
+  names_path: data/komatsu2000/komatsu2000_names.txt  # path of dataset category names
