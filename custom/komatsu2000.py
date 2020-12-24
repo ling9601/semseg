@@ -4,7 +4,7 @@ from tqdm import tqdm
 import cv2
 import numpy as np
 from custom import tools
-from custom.label import Label
+from custom.label import Label, rgb2label
 from custom import visualize
 import matplotlib.pyplot as plt
 
@@ -87,7 +87,7 @@ def transform():
     for path in tqdm(glob.glob(os.path.join(SEG_DIR, '*', '*'))):
         seg = cv2.imread(path)
         seg = cv2.cvtColor(seg, cv2.COLOR_BGR2RGB)
-        label = tools.rgb2label(seg, label_dict)
+        label = rgb2label(seg, label_dict)
         assert seg_folder_name in path
         cv2.imwrite(path.replace(seg_folder_name, 'label'), label)
 
@@ -127,6 +127,19 @@ def make_list_no_depth():
     write(val_depth_list_path, 'val.txt')
 
 
+def normalize_depth_24bit():
+    normalized_depth_24bit_folder_name = 'normalized_3C_depth_24bit'
+    normalized_depth_24bit_dir = os.path.join(DATASET_DIR, normalized_depth_24bit_folder_name)
+    for scene in SCENES:
+        directory = os.path.join(normalized_depth_24bit_dir, scene)
+        if not os.path.exists(directory): os.makedirs(directory)
+    for path in tqdm(glob.glob(os.path.join(DEPTH_DIR, '*', '*'))):
+        depth = cv2.imread(path, cv2.IMREAD_ANYDEPTH)
+        new_depth = tools.normalize_depth_24bit(depth)
+        cv2.imwrite(path.replace('depth_cm16bit', normalized_depth_24bit_folder_name), new_depth)
+
+
+
 if __name__ == '__main__':
     # resize_rgb_depth_seg()
     # check_resize()
@@ -135,8 +148,13 @@ if __name__ == '__main__':
     # make_list()
     # make_list_no_depth()
 
-    # visualize class distribution
+    # # visualize class distribution
+    # label_paths = [os.path.join(DATASET_DIR, line.split(' ')[-1].strip()) for line in
+    #                open('dataset/komatsu2000/list/train.txt', 'r').readlines()]
+    # visualize.visualize_class_distribution(label_paths, CLASS_NAMES, 'train')
 
-    label_paths = [os.path.join(DATASET_DIR, line.split(' ')[-1].strip()) for line in
-                   open('dataset/komatsu2000/list/train.txt', 'r').readlines()]
-    visualize.visualize_class_distribution(label_paths, CLASS_NAMES, 'train')
+    # 24bit depth
+    # depth_path = "dataset/komatsu2000/depth_cm16bit/forward/00000.png"
+    # depth_16bit = cv2.imread(depth_path, cv2.IMREAD_ANYDEPTH)
+    # tools.normalize_depth_24bit(depth_16bit)
+    normalize_depth_24bit()

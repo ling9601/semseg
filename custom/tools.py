@@ -68,3 +68,13 @@ def normalize_depth(src):
     normalized_src = (src / 65535 * 255).astype('uint8')
     normalized_3C_src = np.stack((normalized_src,) * 3, axis=-1)
     return normalized_3C_src
+
+
+def normalize_depth_24bit(src):
+    assert src.dtype == np.uint16
+    depth_24bit = (src / 65535 * 16777215).astype('uint32')
+    first_channel = depth_24bit // np.power(2, 16)
+    second_channel = (depth_24bit - first_channel * np.power(2, 16)) // np.power(2, 8)
+    third_channel = depth_24bit - first_channel * np.power(2, 16) - second_channel * np.power(2, 8)
+    depth_24bit_3C = np.stack([first_channel, second_channel, third_channel], axis=-1).astype('uint8')
+    return depth_24bit_3C
