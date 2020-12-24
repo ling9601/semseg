@@ -4,7 +4,7 @@ from tqdm import tqdm
 import cv2
 import numpy as np
 from custom import tools
-from custom.label import Label, rgb2label
+from custom.label import Label
 from custom import visualize
 import matplotlib.pyplot as plt
 
@@ -66,8 +66,9 @@ def normalize_depth():
         cv2.imwrite(path.replace('depth_cm16bit', normalized_depth_folder_name), new_depth)
 
 
-def transform():
-    seg_folder_name = 'segmentation'
+def transform(seg_dir, label_dir):
+    seg_folder_name = os.path.basename(seg_dir)
+    label_folder_name = os.path.basename(label_dir)
     label_dict = {
         (0, 0, 255): Label('Road', 0),
         (255, 255, 0): Label('RoughRoad', 1),
@@ -82,14 +83,14 @@ def transform():
         (240, 230, 140): Label('Rock', 10)
     }
     for scene in SCENES:
-        directory = os.path.join(LABEL_DIR, scene)
+        directory = os.path.join(label_dir, scene)
         if not os.path.exists(directory): os.makedirs(directory)
-    for path in tqdm(glob.glob(os.path.join(SEG_DIR, '*', '*'))):
+    for path in tqdm(glob.glob(os.path.join(seg_dir, '*', '*'))):
         seg = cv2.imread(path)
         seg = cv2.cvtColor(seg, cv2.COLOR_BGR2RGB)
-        label = rgb2label(seg, label_dict)
+        label = tools.rgb2label(seg, label_dict)
         assert seg_folder_name in path
-        cv2.imwrite(path.replace(seg_folder_name, 'label'), label)
+        cv2.imwrite(path.replace(seg_folder_name, label_folder_name), label)
 
 
 def make_list():
@@ -127,6 +128,33 @@ def make_list_no_depth():
     write(val_depth_list_path, 'val.txt')
 
 
+def create_dilated_segmentation(color_list, folder_name):
+    # class foliage
+    dilated_seg_dir = os.path.join(DATASET_DIR, folder_name)
+    for scene in SCENES:
+        directory = os.path.join(dilated_seg_dir, scene)
+        if not os.path.exists(directory): os.makedirs(directory)
+    seg_paths = sorted(glob.glob(os.path.join(SEG_DIR, '*', '*')))
+    # debug
+    # seg_paths = [path for path in seg_paths if any([num in path for num in ['00001.png', '00041.png', '00129.png', '00131.png']])]
+    for path in tqdm(seg_paths):
+        seg = cv2.imread(path)
+        seg = cv2.cvtColor(seg, cv2.COLOR_BGR2RGB)
+        dilated_seg = seg
+        for color in color_list:
+            dilated_seg = tools.my_dilation(dilated_seg, color, (3, 3), show=False)
+        # # debug
+        # fig = plt.figure()
+        # fig.add_subplot(121).title.set_text('ori')
+        # plt.imshow(seg)
+        # fig.add_subplot(122).title.set_text('dilated')
+        # plt.imshow(dilated_seg)
+        # fig.suptitle(os.path.basename(path))
+        # plt.show()
+        dilated_seg = cv2.cvtColor(dilated_seg, cv2.COLOR_RGB2BGR)
+        cv2.imwrite(path.replace('segmentation', folder_name), dilated_seg)
+
+
 def normalize_depth_24bit():
     normalized_depth_24bit_folder_name = 'normalized_3C_depth_24bit'
     normalized_depth_24bit_dir = os.path.join(DATASET_DIR, normalized_depth_24bit_folder_name)
@@ -139,12 +167,11 @@ def normalize_depth_24bit():
         cv2.imwrite(path.replace('depth_cm16bit', normalized_depth_24bit_folder_name), new_depth)
 
 
-
 if __name__ == '__main__':
     # resize_rgb_depth_seg()
     # check_resize()
     # normalize_depth()
-    # transform()
+    # transform(SEG_DIR, LABEL_DIR)
     # make_list()
     # make_list_no_depth()
 
@@ -157,4 +184,21 @@ if __name__ == '__main__':
     # depth_path = "dataset/komatsu2000/depth_cm16bit/forward/00000.png"
     # depth_16bit = cv2.imread(depth_path, cv2.IMREAD_ANYDEPTH)
     # tools.normalize_depth_24bit(depth_16bit)
-    normalize_depth_24bit()
+    # normalize_depth_24bit()
+
+    # show comparison
+    # pred_dir = 'exp/komatsu2000/pspnet50/result/epoch_200/val/ss/color'
+    # val_list_path = os.path.join(LIST_DIR, 'val_depth.txt')
+    # lines = open(val_list_path, 'r').readlines()
+    # lines = [line.split(' ') for line in lines]
+    # rgb_paths = [os.path.join(DATASET_DIR, line[0].strip()) for line in lines]
+    # depth_paths = [os.path.join(DATASET_DIR, line[1].strip()) for line in lines]
+    # seg_paths = [os.path.join(DATASET_DIR, line[2].strip().replace('label', 'segmentation')) for line in lines]
+    # pred_paths = sorted(glob.glob(os.path.join(pred_dir, '*')))
+    # visualize.visualize_comparison(rgb_paths, depth_paths, [('true', seg_paths), ('PSPNet50', pred_paths)])
+
+    # # dilate foliage and rock
+    # color_list = [(34, 139, 34), (240, 230, 140)]
+    # create_dilated_segmentation(color_list, 'segmentation_dilated_foliage+rock')
+    # transform(os.path.join(DATASET_DIR, 'segmentation_dilated_foliage+rock'), os.path.join(DATASET_DIR, 'label_dilated_foliage+rock'))
+    pass
