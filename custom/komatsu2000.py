@@ -128,7 +128,7 @@ def make_list_no_depth():
     write(val_depth_list_path, 'val.txt')
 
 
-def create_dilated_segmentation(color_list, folder_name):
+def create_transferred_segmentation(color_list, folder_name, method):
     # class foliage
     dilated_seg_dir = os.path.join(DATASET_DIR, folder_name)
     for scene in SCENES:
@@ -140,19 +140,19 @@ def create_dilated_segmentation(color_list, folder_name):
     for path in tqdm(seg_paths):
         seg = cv2.imread(path)
         seg = cv2.cvtColor(seg, cv2.COLOR_BGR2RGB)
-        dilated_seg = seg
+        transferred_seg = seg
         for color in color_list:
-            dilated_seg = tools.my_dilation(dilated_seg, color, (3, 3), show=False)
-        # # debug
+            transferred_seg = tools.morphological_transformation(transferred_seg, color, method, (3, 3), show=False)
+        # debug
         # fig = plt.figure()
         # fig.add_subplot(121).title.set_text('ori')
         # plt.imshow(seg)
         # fig.add_subplot(122).title.set_text('dilated')
-        # plt.imshow(dilated_seg)
+        # plt.imshow(transferred_seg)
         # fig.suptitle(os.path.basename(path))
         # plt.show()
-        dilated_seg = cv2.cvtColor(dilated_seg, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(path.replace('segmentation', folder_name), dilated_seg)
+        transferred_seg = cv2.cvtColor(transferred_seg, cv2.COLOR_RGB2BGR)
+        cv2.imwrite(path.replace('segmentation', folder_name), transferred_seg)
 
 
 def normalize_depth_24bit():
@@ -201,4 +201,11 @@ if __name__ == '__main__':
     # color_list = [(34, 139, 34), (240, 230, 140)]
     # create_dilated_segmentation(color_list, 'segmentation_dilated_foliage+rock')
     # transform(os.path.join(DATASET_DIR, 'segmentation_dilated_foliage+rock'), os.path.join(DATASET_DIR, 'label_dilated_foliage+rock'))
-    pass
+    # dilate rock only
+    # color_list = [(240, 230, 140)]
+    # create_transferred_segmentation(color_list, 'segmentation_dilated_rock', 'dilate')
+    # transform(os.path.join(DATASET_DIR, 'segmentation_dilated_rock'), os.path.join(DATASET_DIR, 'label_dilated_rock'))
+    # close flioage and rock
+    color_list = [(34, 139, 34), (240, 230, 140)]
+    create_transferred_segmentation(color_list, 'segmentation_closing_foliage+rock', 'closing')
+    transform(os.path.join(DATASET_DIR, 'segmentation_closing_foliage+rock'), os.path.join(DATASET_DIR, 'label_closing_foliage+rock'))

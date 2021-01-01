@@ -7,10 +7,12 @@ from tqdm import tqdm
 from custom.label import rgb2label, Label, color2label_komatsu600
 
 
-def my_dilation(img, color, kernel_size=(5, 5), show=False):
+def morphological_transformation(img, color, method='dilate', kernel_size=(5, 5), show=False):
     """
 
 
+    @param method: dilate or closing
+    @type method: str
     @param img: image in rgb format
     @type img: np.ndarray
     @param kernel_size: kernel_size of cv2.dilate()
@@ -18,32 +20,37 @@ def my_dilation(img, color, kernel_size=(5, 5), show=False):
     @param color: (R,G,B)
     @type color: tuple
     """
+    assert method in ['dilate', 'closing'], 'unsupported method'
     my_label_dict = {
         color: Label('None', 255),
     }
-    out = rgb2label(img, my_label_dict, default_label=0)
-    out_dilated = cv2.dilate(out.copy(), np.ones(kernel_size, np.uint8), iterations=1)
+    label = rgb2label(img, my_label_dict, default_label=0)
+    kernel = np.ones(kernel_size, np.uint8)
+    if method == 'dilate':
+        out = cv2.dilate(label.copy(), kernel, iterations=1)
+    elif method == 'closing':
+        out = cv2.morphologyEx(label.copy(), cv2.MORPH_CLOSE, kernel)
 
     new_img = img.copy()
     for h in range(img.shape[0]):
         for w in range(img.shape[1]):
-            if out_dilated[h, w] == 255:
+            if out[h, w] == 255:
                 new_img[h, w, 0] = color[0]
                 new_img[h, w, 1] = color[1]
                 new_img[h, w, 2] = color[2]
 
     if show:
         fig = plt.figure()
-        fig.add_subplot(221).title.set_text('_ori')
+        fig.add_subplot(221).title.set_text('label')
+        plt.imshow(label)
+        plt.axis('off')
+        fig.add_subplot(222).title.set_text('transferred_label')
         plt.imshow(out)
         plt.axis('off')
-        fig.add_subplot(222).title.set_text('_after')
-        plt.imshow(out_dilated)
-        plt.axis('off')
-        fig.add_subplot(223).title.set_text('ori')
+        fig.add_subplot(223).title.set_text('segmentation')
         plt.imshow(img)
         plt.axis('off')
-        fig.add_subplot(224).title.set_text('after')
+        fig.add_subplot(224).title.set_text('transferred_segmentation')
         plt.imshow(new_img)
         plt.axis('off')
         plt.show()

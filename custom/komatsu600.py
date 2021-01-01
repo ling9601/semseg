@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 from custom.label import color2label_komatsu600, rgb2label
 import imageio
-from custom.tools import my_dilation, transform
+from custom.tools import morphological_transformation, transform
 from custom.analyze import print_avg_iou
 from custom.visualize import visualize_class_distribution, visualize_comparison
 import matplotlib.pyplot as plt
@@ -114,7 +114,7 @@ def create_dilated_segmentation(color_list, folder_name):
         seg = imageio.imread(path)
         dilated_seg = seg
         for color in color_list:
-            dilated_seg = my_dilation(dilated_seg, color, (3, 3), show=False)
+            dilated_seg = morphological_transformation(dilated_seg, color, (3, 3), show=False)
         # debug
         # fig = plt.figure()
         # fig.add_subplot(121).title.set_text('ori')
