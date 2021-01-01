@@ -128,7 +128,7 @@ def make_list_no_depth():
     write(val_depth_list_path, 'val.txt')
 
 
-def create_transferred_segmentation(color_list, folder_name, method):
+def create_transferred_segmentation(color_list, folder_name, method, kernel_size):
     # class foliage
     dilated_seg_dir = os.path.join(DATASET_DIR, folder_name)
     for scene in SCENES:
@@ -142,12 +142,12 @@ def create_transferred_segmentation(color_list, folder_name, method):
         seg = cv2.cvtColor(seg, cv2.COLOR_BGR2RGB)
         transferred_seg = seg
         for color in color_list:
-            transferred_seg = tools.morphological_transformation(transferred_seg, color, method, (3, 3), show=False)
+            transferred_seg = tools.morphological_transformation(transferred_seg, color, method, kernel_size, show=False)
         # debug
         # fig = plt.figure()
         # fig.add_subplot(121).title.set_text('ori')
         # plt.imshow(seg)
-        # fig.add_subplot(122).title.set_text('dilated')
+        # fig.add_subplot(122).title.set_text('transferred')
         # plt.imshow(transferred_seg)
         # fig.suptitle(os.path.basename(path))
         # plt.show()
@@ -205,7 +205,12 @@ if __name__ == '__main__':
     # color_list = [(240, 230, 140)]
     # create_transferred_segmentation(color_list, 'segmentation_dilated_rock', 'dilate')
     # transform(os.path.join(DATASET_DIR, 'segmentation_dilated_rock'), os.path.join(DATASET_DIR, 'label_dilated_rock'))
-    # close flioage and rock
+    # close flioage and rock with kernel size 3x3
+    # color_list = [(34, 139, 34), (240, 230, 140)]
+    # create_transferred_segmentation(color_list, 'segmentation_closing_foliage+rock', 'closing', (3, 3))
+    # transform(os.path.join(DATASET_DIR, 'segmentation_closing_foliage+rock'), os.path.join(DATASET_DIR, 'label_closing_foliage+rock'))
+
+    # close flioage and rock with kernel size 5x5
     color_list = [(34, 139, 34), (240, 230, 140)]
-    create_transferred_segmentation(color_list, 'segmentation_closing_foliage+rock', 'closing')
-    transform(os.path.join(DATASET_DIR, 'segmentation_closing_foliage+rock'), os.path.join(DATASET_DIR, 'label_closing_foliage+rock'))
+    create_transferred_segmentation(color_list, 'segmentation_closing_foliage+rock_5x5', 'closing', (5, 5))
+    transform(os.path.join(DATASET_DIR, 'segmentation_closing_foliage+rock_5x5'), os.path.join(DATASET_DIR, 'label_closing_foliage+rock_5x5'))
