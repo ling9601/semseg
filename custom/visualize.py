@@ -53,7 +53,7 @@ def img_overlay(overlay, output, alpha=0.5):
     return cv2.addWeighted(overlay, output, img2, 1 - alpha)
 
 
-def visualize_comparison(rgb_paths, depth_paths, segmentation_list, overlay=False, alpha=0.5):
+def visualize_comparison(rgb_paths, depth_paths, segmentation_list, overlay=False, alpha=0.5, out_dir = None):
     """
     Show rgb image, true segmentation image, predicted segmentation image at the same time for len(rgb_paths) times
 
@@ -68,8 +68,18 @@ def visualize_comparison(rgb_paths, depth_paths, segmentation_list, overlay=Fals
     @param alpha: alpha value for overlay
     @type alpha: float
     """
+
     assert len(segmentation_list) <= 4
+    if out_dir:
+        rgb_dir = os.path.join(out_dir, 'rgb')
+        depth_dir = os.path.join(out_dir, 'depth')
+        for directory in [rgb_dir, depth_dir]:
+            if not os.path.exists(directory): os.makedirs(directory)
+        for seg in segmentation_list:
+            sub_seg_dir = os.path.join(out_dir, seg[0])
+            if not os.path.exists(sub_seg_dir): os.makedirs(sub_seg_dir)
     for idx_path in range(len(rgb_paths)):
+        file_name = os.path.basename(rgb_paths[idx_path])
         rgb_img = cv2.imread(rgb_paths[idx_path])
         depth_img = cv2.imread(depth_paths[idx_path])
         fig = plt.figure()
@@ -87,6 +97,12 @@ def visualize_comparison(rgb_paths, depth_paths, segmentation_list, overlay=Fals
             fig.add_subplot(2, 3, 3 + idx_seg).title.set_text(seg[0])
             plt.axis('off')
             plt.imshow(seg_img[:, :, ::-1])
-        fig.suptitle(os.path.basename(rgb_paths[idx_path]))
+            if out_dir:
+                cv2.imwrite(os.path.join(out_dir, seg[0], file_name), seg_img)
+        if out_dir:
+            cv2.imwrite(os.path.join(rgb_dir, file_name), rgb_img)
+            cv2.imwrite(os.path.join(depth_dir, file_name), depth_img)
+        fig.suptitle(file_name)
+        mng = plt.get_current_fig_manager()
+        mng.resize(*mng.window.maxsize())
         plt.show()
-

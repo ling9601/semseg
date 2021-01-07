@@ -136,23 +136,24 @@ def create_transferred_segmentation(color_list, folder_name, method, kernel_size
         if not os.path.exists(directory): os.makedirs(directory)
     seg_paths = sorted(glob.glob(os.path.join(SEG_DIR, '*', '*')))
     # debug
-    # seg_paths = [path for path in seg_paths if any([num in path for num in ['00001.png', '00041.png', '00129.png', '00131.png']])]
+    seg_paths = [path for path in seg_paths if any([num in path for num in ['00001.png', '00041.png', '00129.png', '00131.png']])]
     for path in tqdm(seg_paths):
         seg = cv2.imread(path)
         seg = cv2.cvtColor(seg, cv2.COLOR_BGR2RGB)
         transferred_seg = seg
         for color in color_list:
-            transferred_seg = tools.morphological_transformation(transferred_seg, color, method, kernel_size, show=False)
+            transferred_seg = tools.morphological_transformation(transferred_seg, color, method, kernel_size,
+                                                                 show=False)
         # debug
-        # fig = plt.figure()
-        # fig.add_subplot(121).title.set_text('ori')
-        # plt.imshow(seg)
-        # fig.add_subplot(122).title.set_text('transferred')
-        # plt.imshow(transferred_seg)
-        # fig.suptitle(os.path.basename(path))
-        # plt.show()
+        fig = plt.figure()
+        fig.add_subplot(121).title.set_text('ori')
+        plt.imshow(seg)
+        fig.add_subplot(122).title.set_text('transferred')
+        plt.imshow(transferred_seg)
+        fig.suptitle(os.path.basename(path))
+        plt.show()
         transferred_seg = cv2.cvtColor(transferred_seg, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(path.replace('segmentation', folder_name), transferred_seg)
+        # cv2.imwrite(path.replace('segmentation', folder_name), transferred_seg)
 
 
 def normalize_depth_24bit():
@@ -187,15 +188,17 @@ if __name__ == '__main__':
     # normalize_depth_24bit()
 
     # show comparison
-    # pred_dir = 'exp/komatsu2000/pspnet50/result/epoch_200/val/ss/color'
-    # val_list_path = os.path.join(LIST_DIR, 'val_depth.txt')
-    # lines = open(val_list_path, 'r').readlines()
-    # lines = [line.split(' ') for line in lines]
-    # rgb_paths = [os.path.join(DATASET_DIR, line[0].strip()) for line in lines]
-    # depth_paths = [os.path.join(DATASET_DIR, line[1].strip()) for line in lines]
-    # seg_paths = [os.path.join(DATASET_DIR, line[2].strip().replace('label', 'segmentation')) for line in lines]
-    # pred_paths = sorted(glob.glob(os.path.join(pred_dir, '*')))
-    # visualize.visualize_comparison(rgb_paths, depth_paths, [('true', seg_paths), ('PSPNet50', pred_paths)])
+    idx_list = [265,]
+    file_names = ['{:0>5}.png'.format(idx) for idx in idx_list]
+    rgb_paths = [os.path.join(RGB_DIR, 'backward', n) for n in file_names]
+    depth_paths = [os.path.join(DATASET_DIR, 'normalized_3C_depth', 'backward', n) for n in file_names]
+    seg_paths = [os.path.join(SEG_DIR, 'backward', n) for n in file_names]
+    pred_dir_pspnet50 = 'exp/komatsu2000_random/pspnet50/result/epoch_200/val/ss/color'
+    pred_paths_pspnet50 = [os.path.join(pred_dir_pspnet50, n) for n in file_names]
+    pred_dir_proposed = 'exp/komatsu2000_random/fusepspnet50/result/epoch_200/val/ss/color'
+    pred_paths_proposed = [os.path.join(pred_dir_proposed, n) for n in file_names]
+    visualize.visualize_comparison(rgb_paths, depth_paths, [('true', seg_paths), ('PSPNet50', pred_paths_pspnet50),
+                                                            ('Proposed', pred_paths_proposed)], overlay=True, out_dir='analyze')
 
     # # dilate foliage and rock
     # color_list = [(34, 139, 34), (240, 230, 140)]
@@ -206,9 +209,9 @@ if __name__ == '__main__':
     # create_transferred_segmentation(color_list, 'segmentation_dilated_rock', 'dilate')
     # transform(os.path.join(DATASET_DIR, 'segmentation_dilated_rock'), os.path.join(DATASET_DIR, 'label_dilated_rock'))
     # close flioage and rock with kernel size 3x3
-    color_list = [(34, 139, 34), (240, 230, 140)]
-    create_transferred_segmentation(color_list, 'segmentation_closing_foliage+rock', 'closing', (3, 3))
-    transform(os.path.join(DATASET_DIR, 'segmentation_closing_foliage+rock'), os.path.join(DATASET_DIR, 'label_closing_foliage+rock'))
+    # color_list = [(34, 139, 34), (240, 230, 140)]
+    # create_transferred_segmentation(color_list, 'segmentation_closing_foliage+rock', 'closing', (3, 3))
+    # transform(os.path.join(DATASET_DIR, 'segmentation_closing_foliage+rock'), os.path.join(DATASET_DIR, 'label_closing_foliage+rock'))
 
     # close flioage and rock with kernel size 5x5
     # color_list = [(34, 139, 34), (240, 230, 140)]
