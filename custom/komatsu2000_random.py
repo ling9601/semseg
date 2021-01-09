@@ -188,17 +188,19 @@ if __name__ == '__main__':
     # normalize_depth_24bit()
 
     # show comparison
-    idx_list = [265,]
+    # idx_list = list(range(453, 458)) + list(range(626, 632)) + list(range(657, 665)) + list(range(721, 726))
+    # idx_list = list(range(649, 674)) + list(range(708, 729))
+    idx_list = [253, 276, 280, 454, 631, 661]
     file_names = ['{:0>5}.png'.format(idx) for idx in idx_list]
     rgb_paths = [os.path.join(RGB_DIR, 'backward', n) for n in file_names]
     depth_paths = [os.path.join(DATASET_DIR, 'normalized_3C_depth', 'backward', n) for n in file_names]
     seg_paths = [os.path.join(SEG_DIR, 'backward', n) for n in file_names]
-    pred_dir_pspnet50 = 'exp/komatsu2000_random/pspnet50/result/epoch_200/val/ss/color'
-    pred_paths_pspnet50 = [os.path.join(pred_dir_pspnet50, n) for n in file_names]
-    pred_dir_proposed = 'exp/komatsu2000_random/fusepspnet50/result/epoch_200/val/ss/color'
-    pred_paths_proposed = [os.path.join(pred_dir_proposed, n) for n in file_names]
-    visualize.visualize_comparison(rgb_paths, depth_paths, [('true', seg_paths), ('PSPNet50', pred_paths_pspnet50),
-                                                            ('Proposed', pred_paths_proposed)], overlay=True, out_dir='analyze')
+    pred_dir = 'exp/komatsu2000_random/pspnet50/result/epoch_200/val/ss/color'
+    pred_paths = [os.path.join(pred_dir, n) for n in file_names]
+    pred_dir_closing = 'exp/komatsu2000_random_closing_foliage+rock/attention_v1_fusepspnet50/result/epoch_200/val/ss/color'
+    pred_paths_closing = [os.path.join(pred_dir_closing, n) for n in file_names]
+    visualize.visualize_comparison(rgb_paths, depth_paths, [('true', seg_paths), ('normal', pred_paths),
+                                                            ('closing', pred_paths_closing)], overlay=True, out_dir='out')
 
     # # dilate foliage and rock
     # color_list = [(34, 139, 34), (240, 230, 140)]

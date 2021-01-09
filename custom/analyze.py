@@ -56,21 +56,27 @@ def print_avg_iou(log_paths):
         all_ious.append(ious)
         all_accs.append(accs)
 
-    all_ious = np.asarray(all_ious)
-    all_accs = np.asarray(all_accs)
+    all_ious = np.asarray(all_ious)*100
+    all_accs = np.asarray(all_accs)*100
+    avg_ious = all_ious.mean(axis=0)
+    avg_accs = all_accs.mean(axis=0)
+    std_ious = np.std(all_ious, axis=0)
+    std_accs = np.std(all_accs, axis=0)
+
 
     print(' | '.join(['{:20}'.format('CLASS')] + ['{:11}'.format(str(t + 1)) for t in range(run_times)] + [
-        '{:11}'.format('AVERAGE')]))
+        '{:11}'.format('AVERAGE')] + ['{:11}'.format('STD')]))
     for idx, class_name in enumerate(class_names):
         print(' | '.join(
-            ['{:20}'.format(class_name)] + ['{:.3f}/{:.3f}'.format(all_ious[t, idx], all_accs[t, idx]) for t in
+            ['{:20}'.format(class_name)] + ['{:.2f}/{:.2f}'.format(all_ious[t, idx], all_accs[t, idx]) for t in
                                             range(run_times)] + [
-                '{:.3f}/{:.3f}'.format(sum(all_ious[:, idx] / run_times), sum(all_accs[:, idx] / run_times))]))
+                '{:.2f}/{:.2f}'.format(avg_ious[idx], avg_accs[idx])]
+        + ['{:.2f}/{:.2f}'.format(std_ious[idx], std_accs[idx])]))
     mious = all_ious.mean(axis=1)
     maccs = all_accs.mean(axis=1)
     print(' | '.join(
-        ['{:20}'.format('AVERAGE')] + ['{:.3f}/{:.3f}'.format(miou, macc) for miou, macc in zip(mious, maccs)] + [
-            '{:.3f}/{:.3f}'.format(mious.mean(), maccs.mean())]))
+        ['{:20}'.format('AVERAGE')] + ['{:.2f}/{:.2f}'.format(miou, macc) for miou, macc in zip(mious, maccs)] + [
+            '{:.2f}/{:.2f}'.format(mious.mean(), maccs.mean())] + ['{:.2f}/{:.2f}'.format(np.std(mious), np.std(maccs))]))
 
 
 if __name__ == '__main__':
